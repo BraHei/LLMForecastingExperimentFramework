@@ -1,0 +1,3 @@
+[submodule "AMD_PyTorch/Projects/TTM_HelloPrediction/granite-tsfm"]
+	path = AMD_PyTorch/Projects/TTM_HelloPrediction/granite-tsfm
+	url = https://github.com/ibm-granite/granite-tsfm.git
