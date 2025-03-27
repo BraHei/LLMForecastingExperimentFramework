@@ -28,7 +28,7 @@ model = AutoModelForCausalLM.from_pretrained(checkpoint).to(device)
 ##### STEP 3: PREPARE DATA REQUEST ##########
 
 # # Get user input
-dataPredictionrequest = f"I will present you with a time series data that is  masked as lower and upper case letters. I want you to predict the sequence of following letters."
+dataPredictionrequest = f"I will present you a time series data that is masked as lower and upper case letters. I want you to predict the sequence of following letters."
 
 messages = [{"role": "user", "content": dataPredictionrequest}]
 input_text=tokenizer.apply_chat_template(messages, tokenize=False)
@@ -90,7 +90,7 @@ print(dataString+responeCleaned)
 # ######## STEP 5: MODEL BACK #################
 
 inverse_ts = fabba.inverse_transform(dataString, ts[0]) # numerical time series reconstruction
-inverse_ts_predicted = fabba.inverse_transform(dataString+responeCleaned, ts[0]) # predicted
+inverse_ts_predicted = fabba.inverse_transform(responeCleaned, ts[999]) # predicted
 
 # print(inverse_ts_predicted)
 
