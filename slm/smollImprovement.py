@@ -38,9 +38,9 @@ inputs = tokenizer.encode(input_text, return_tensors="pt").to(device)
 # # Generate output with improved settings
 outputs = model.generate(inputs, 
                          max_new_tokens=100, 
-                         temperature=0.2, 
+                         temperature=1.0, 
                          top_p=0.9, 
-                         do_sample=True)
+                         do_sample=False)
 
 # # Decode and print response
 response = tokenizer.decode(outputs[0], skip_special_tokens=False)
@@ -59,9 +59,9 @@ inputs = tokenizer.encode(input_text, return_tensors="pt").to(device)
 # # Generate output with improved settings
 outputs = model.generate(inputs, 
                          max_new_tokens=40, 
-                         temperature=0.2, 
+                         temperature=1.0, 
                          top_p=0.9, 
-                         do_sample=True)
+                         do_sample=False)
 
 # # Decode and print response
 response = tokenizer.decode(outputs[0], skip_special_tokens=False)
