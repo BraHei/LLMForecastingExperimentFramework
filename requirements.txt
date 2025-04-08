@@ -18,7 +18,7 @@ MarkupSafe==2.1.5
 matplotlib==3.10.1
 mpmath==1.3.0
 networkx==3.3
-numpy==2.1.3
+numpy==1.26.4
 packaging==24.2
 pandas==2.2.3
 pillow==11.1.0
@@ -37,14 +37,13 @@ scikit-learn==1.6.1
 scipy==1.15.2
 setuptools==70.2.0
 six==1.17.0
-sympy==1.13.1
+sympy>=1.11,<1.13 
 threadpoolctl==3.6.0
 tokenizers==0.21.1
 toolz==0.12.1
-torch==2.6.0+cpu
 tqdm==4.67.1
 transformers==4.50.3
 typing-inspection==0.4.0
 typing_extensions==4.12.2
 tzdata==2025.2
-urllib3==2.3.0
+urllib3==1.26.18

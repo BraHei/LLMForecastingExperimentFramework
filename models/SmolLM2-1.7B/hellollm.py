@@ -1,7 +1,7 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 checkpoint = "HuggingFaceTB/SmolLM2-1.7B-Instruct"
-device = "cpu"  # Change to "cuda" if using a GPU
+device = "cuda"  # Change to "cuda" if using a GPU
 
 # Load model and tokenizer
 tokenizer = AutoTokenizer.from_pretrained(checkpoint)

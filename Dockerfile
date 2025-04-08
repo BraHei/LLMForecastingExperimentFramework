@@ -1,0 +1,23 @@
+FROM rocm/pytorch:latest
+
+# Prevent Python from writing .pyc files and buffering
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Install system tools (optional)
+RUN apt-get update && apt-get install -y \
+    git vim curl wget htop \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies globally
+RUN pip freeze | grep torch > torch_version.txt
+COPY requirements.txt .
+RUN pip install --upgrade pip \
+    && pip install -r requirements.txt --constraint=torch_version.txt
+
+# Set working directory
+WORKDIR /workspace
+
+# Default to bash
+CMD ["/bin/bash"]
+

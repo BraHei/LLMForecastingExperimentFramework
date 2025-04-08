@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  dev:
+    build: .
+    image: rocm-dev-env
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+
+    # Make container interactive
+    stdin_open: true
+    tty: true
+    command: /bin/bash  # << Drops you into an interactive shell!
+
+    # ROCm flags to match your working docker run setup
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp=unconfined
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    group_add:
+      - video
+    ipc: host
+    shm_size: 8g
+
+    environment:
+      - PYTHONUNBUFFERED=1
+

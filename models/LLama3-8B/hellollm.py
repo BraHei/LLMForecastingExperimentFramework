@@ -1,20 +1,19 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from huggingface_hub import snapshot_download, hf_hub_download
 import os
+from huggingface_hub import snapshot_download
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
 checkpoint = "meta-llama/Meta-Llama-3-8B-Instruct"
-device = "cpu"  # Change to "cuda" if using a GPU
+device = "cuda"  # Change to "cuda" if using a GPU
 
 # Check if model is already downloaded
-# local_dir = os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub", "models--" + checkpoint.replace("/", "--"))
+local_dir = os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub", "models--" + checkpoint.replace("/", "--"))
 
-# if not os.path.exists(local_dir):
 access_token = input("Enter your Hugging Face access token: ")
 snapshot_download(repo_id=checkpoint, token=access_token)
 
 # Load model and tokenizer
 tokenizer = AutoTokenizer.from_pretrained(checkpoint)
-model = AutoModelForCausalLM.from_pretrained(checkpoint).to(device)
+model = AutoModelForCausalLM.from_pretrained(checkpoint, token=access_token, torch_dtype="auto").to("cuda")
 
 # Get user input
 prompt = input("Enter your prompt: ")

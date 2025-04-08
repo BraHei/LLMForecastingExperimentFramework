@@ -4,5 +4,10 @@ Information, source code and more for the Master Thesis
 
 # Install requirements
 
-In order to run the requirements.txt through pip additional flags are required, specificly for the PyTorch install. Use the following command to install all relevant packages:
-```pip install -r requirements.txt --find-links https://download.pytorch.org/whl/cpu```.
+The requiremetns do not contain Pytorch. This has to be installed seperatly. The included dockerfile uses ROCm Pytorch as base image, change accordingly.
+
+To run use the following commands:
+```
+docker compose run --build --rm dev
+```
+
