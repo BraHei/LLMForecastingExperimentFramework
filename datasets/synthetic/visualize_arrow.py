@@ -24,6 +24,7 @@ def plot_series(start_times, series_list, num_series=5):
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
+    plt.savefig("Example")
     plt.show()
 
 
