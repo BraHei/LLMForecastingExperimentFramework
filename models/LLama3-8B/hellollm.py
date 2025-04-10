@@ -2,7 +2,7 @@ import os
 from huggingface_hub import snapshot_download
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
-checkpoint = "meta-llama/Meta-Llama-3-8B-Instruct"
+checkpoint = "meta-llama/Meta-Llama-3.1-8B-Instruct"
 device = "cuda"  # Change to "cuda" if using a GPU
 
 # Check if model is already downloaded
