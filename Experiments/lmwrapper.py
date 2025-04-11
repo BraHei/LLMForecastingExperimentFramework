@@ -1,5 +1,6 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
+import sys
 
 class CausalLMWrapper:
     def __init__(self, 
@@ -34,7 +35,7 @@ class CausalLMWrapper:
         if self.context_window is None:
             print("Warning: Model context window (max_position_embeddings) not found in config.")
 
-        self.is_instruct = "-instruct" in checkpoint and hasattr(self.tokenizer, "apply_chat_template")
+        self.is_instruct = hasattr(self.tokenizer, "apply_chat_template")
 
     def get_context_window(self) -> int:
         """
@@ -46,15 +47,12 @@ class CausalLMWrapper:
         """
         Generate a response using a chat template if available and applicable.
         """
+        
         if self.is_instruct:
             messages = [{"role": "user", "content": prompt}]
-            input_ids = self.tokenizer.apply_chat_template(
-                messages,
-                tokenize=True,
-                return_tensors="pt"
-            ).to(self.device)
-        else:
-            input_ids = self.tokenizer.encode(prompt, return_tensors="pt").to(self.device)
+            prompt = self.tokenizer.apply_chat_template(messages, tokenize=False)
+        
+        input_ids = self.tokenizer.encode(prompt, return_tensors="pt").to(self.device)
 
         total_tokens = input_ids.shape[-1] + self.max_new_tokens
         if self.context_window and total_tokens > self.context_window:
@@ -77,19 +75,27 @@ class CausalLMWrapper:
         return self.tokenizer.decode(outputs[0], skip_special_tokens=False)
 
 
-def read_multiline_input(prompt: str = "Enter your prompt (end with empty line):") -> str:
+def read_multiline_input(prompt: str = "Enter your prompt (finish with empty line):") -> str:
     print(prompt)
+    print("(Press Enter twice to submit input)")
     lines = []
-    while True:
-        try:
-            line = input()
+    try:
+        while True:
+            print("> ", end="", flush=True)
+            line = sys.stdin.readline()
+            if not line:
+                break  # EOF
             if line.strip() == "":
-                break
-            lines.append(line)
-        except EOFError:
-            break
+                if lines:
+                    break  # End input after first empty line
+                else:
+                    print("(Empty input ignored. Type something or Ctrl+C to exit.)")
+                    continue
+            lines.append(line.rstrip("\n"))
+    except KeyboardInterrupt:
+        print("\nInterrupted by user.")
+        sys.exit(0)
     return "\n".join(lines)
-
 
 def main():
     import argparse
@@ -120,6 +126,11 @@ def main():
 
     while True:
         prompt = read_multiline_input()
+        print("\n##################################")
+        print("Model Input:")
+        print("##################################\n")
+        print(prompt)
+        
         response = model.generate_response(prompt)
         print("\n##################################")
         print("Model Response:")
