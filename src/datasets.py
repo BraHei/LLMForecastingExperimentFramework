@@ -44,11 +44,14 @@ class KernelSynthDataset(BaseDataset):
         self.sequence_lenght = sequence_lenght
         self.n_jobs = n_jobs
 
-    def load(self) -> List[Dict]:
+    def load(self):
+        print(f"Generating {self.num_series} synthetic time series (parallel, n_jobs={self.n_jobs})...")
+        # Call Parallel safely – this works in script mode
         return Parallel(n_jobs=self.n_jobs)(
             delayed(generate_time_series)(max_kernels=self.max_kernels, sequence_lenght=self.sequence_lenght)
             for _ in tqdm(range(self.num_series), desc="KernelSynth")
         )
+
 
     def metadata(self):
         return {
