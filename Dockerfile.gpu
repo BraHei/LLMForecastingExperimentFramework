@@ -19,6 +19,7 @@ RUN pip install -r requirements.txt --constraint=torch_version.txt
 
 # Set working directory
 WORKDIR /workspace
+ENV PYTHONPATH=/workspace
 
 # Default to bash
 CMD ["/bin/bash"]

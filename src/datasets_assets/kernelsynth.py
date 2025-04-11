@@ -180,7 +180,7 @@ def generate_time_series(max_kernels: int = 5, sequence_lenght: int = DEFAULT_LE
         except np.linalg.LinAlgError as err:
             print("Error caught:", err)
             continue
-
+        
         # The timestamp is arbitrary
         return {"start": np.datetime64("2000-01-01 00:00", "s"), "target": ts.squeeze()}
 

@@ -4,6 +4,8 @@ from pathlib import Path
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
+import sys
+
 import pyarrow as pa
 import numpy as np
 
@@ -44,13 +46,26 @@ class KernelSynthDataset(BaseDataset):
         self.sequence_lenght = sequence_lenght
         self.n_jobs = n_jobs
 
+    # def load(self):
+    #     print(f"Generating the following data: num {self.num_series}, kern {self.max_kernels}, leng {self.sequence_lenght}")
+    #     return [
+    #         generate_time_series(max_kernels=self.max_kernels, sequence_lenght=self.sequence_lenght)
+    #         for i in range(self.num_series)
+    #     ]
+
     def load(self):
-        print(f"Generating {self.num_series} synthetic time series (parallel, n_jobs={self.n_jobs})...")
-        # Call Parallel safely – this works in script mode
-        return Parallel(n_jobs=self.n_jobs)(
-            delayed(generate_time_series)(max_kernels=self.max_kernels, sequence_lenght=self.sequence_lenght)
-            for _ in tqdm(range(self.num_series), desc="KernelSynth")
+
+        results = Parallel(n_jobs=self.n_jobs, backend="loky", verbose=0)(
+            delayed(generate_time_series)(
+                max_kernels=self.max_kernels,
+                sequence_lenght=self.sequence_lenght
+            )
+            for _ in tqdm(range(self.num_series), desc="KernelSynth", leave=False)
         )
+
+        print("Parallel generation complete.")
+        return results
+
 
 
     def metadata(self):

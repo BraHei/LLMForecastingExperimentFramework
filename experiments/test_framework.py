@@ -11,8 +11,8 @@ from src.lmwrapper import get_model
 CHECKPOINT_NAME = "smollm2-135m"
 DEVICE = "cpu"
 NUM_SERIES = 1
-MAX_KERNELS = 2
-SEQUENCE_LENGHT = 4096
+MAX_KERNELS = 1
+SEQUENCE_LENGHT = 50
 OUTPUT_CSV = "model_responses.csv"
 PLOT_FOLDER = "plots"
 Path(PLOT_FOLDER).mkdir(exist_ok=True)
