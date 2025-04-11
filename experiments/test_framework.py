@@ -10,9 +10,9 @@ from src.lmwrapper import get_model
 # === Settings ===
 CHECKPOINT_NAME = "smollm2-135m"
 DEVICE = "cpu"
-NUM_SERIES = 1
-MAX_KERNELS = 1
-SEQUENCE_LENGHT = 50
+NUM_SERIES = 3
+MAX_KERNELS = 2
+SEQUENCE_LENGHT = 1024
 OUTPUT_CSV = "model_responses.csv"
 PLOT_FOLDER = "plots"
 Path(PLOT_FOLDER).mkdir(exist_ok=True)
@@ -66,14 +66,14 @@ def main():
 
     for idx, ts in enumerate(ts_list):
         print(f"Processing time series {idx + 1}/{len(ts_list)}...")
-
-        data_string = tokenizer.encode(ts)
+        ts_data = ts["target"]
+        data_string = tokenizer.encode(ts_data)
         model_response = prompt_model(data_string)
 
-        reconstructed, rec_success = inverse_transform_safe(tokenizer, data_string, ts[0])
-        predicted, pred_success = inverse_transform_safe(tokenizer, model_response, ts[-1])
+        reconstructed, rec_success = inverse_transform_safe(tokenizer, data_string, ts_data[0])
+        predicted, pred_success = inverse_transform_safe(tokenizer, model_response, ts_data[-1])
 
-        plot_path = plot_series(idx, ts, reconstructed if rec_success else ts, predicted, pred_success)
+        plot_path = plot_series(idx, ts_data, reconstructed if rec_success else ts, predicted, pred_success)
 
         results.append({
             "id": idx,

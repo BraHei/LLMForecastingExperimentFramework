@@ -31,7 +31,8 @@ class LMWrapper:
         if self.context_window is None:
             print("Warning: Model context window not found in config.")
 
-        self.is_instruct = hasattr(self.tokenizer, "apply_chat_template")
+        self.is_instruct = (("-instruct" in checkpoint.lower()) and hasattr(self.tokenizer, "apply_chat_template")
+        )
 
     def get_context_window(self) -> int:
         return self.context_window

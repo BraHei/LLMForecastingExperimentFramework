@@ -55,7 +55,7 @@ class KernelSynthDataset(BaseDataset):
 
     def load(self):
 
-        results = Parallel(n_jobs=self.n_jobs, backend="loky", verbose=0)(
+        results = Parallel(n_jobs=self.n_jobs, verbose=0)(
             delayed(generate_time_series)(
                 max_kernels=self.max_kernels,
                 sequence_lenght=self.sequence_lenght
