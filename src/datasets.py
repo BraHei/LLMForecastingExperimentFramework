@@ -38,15 +38,15 @@ class NixtlaDataset(BaseDataset):
         }
 
 class KernelSynthDataset(BaseDataset):
-    def __init__(self, num_series: int = 100, max_kernels: int = 5, sequence_length: int = 1024, n_jobs: int = -1):
+    def __init__(self, num_series: int = 100, max_kernels: int = 5, sequence_lenght: int = 1024, n_jobs: int = -1):
         self.num_series = num_series
         self.max_kernels = max_kernels
-        self.sequence_lenght = sequence_length
+        self.sequence_lenght = sequence_lenght
         self.n_jobs = n_jobs
 
     def load(self) -> List[Dict]:
         return Parallel(n_jobs=self.n_jobs)(
-            delayed(generate_time_series)(max_kernels=self.max_kernels, sequence_length=self.sequence_lenght)
+            delayed(generate_time_series)(max_kernels=self.max_kernels, sequence_lenght=self.sequence_lenght)
             for _ in tqdm(range(self.num_series), desc="KernelSynth")
         )
 
