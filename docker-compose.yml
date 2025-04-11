@@ -1,17 +1,32 @@
 services:
-  dev:
-    build: .
-    image: rocm-dev-env
+  dev-cpu:
+    build:
+      context: .
+      dockerfile: Dockerfile.cpu
+    image: my-project:cpu
     volumes:
       - .:/workspace
     working_dir: /workspace
-
-    # Make container interactive
     stdin_open: true
     tty: true
-    command: /bin/bash  # << Drops you into an interactive shell!
+    command: /bin/bash
+    environment:
+      - PYTHONUNBUFFERED=1
+    profiles: ["cpu"]
 
-    # ROCm flags to match your working docker run setup
+  dev-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+    image: my-project:gpu
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+    environment:
+      - PYTHONUNBUFFERED=1
     cap_add:
       - SYS_PTRACE
     security_opt:
@@ -23,7 +38,5 @@ services:
       - video
     ipc: host
     shm_size: 8g
-
-    environment:
-      - PYTHONUNBUFFERED=1
+    profiles: ["gpu"]
 

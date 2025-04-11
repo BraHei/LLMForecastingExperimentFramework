@@ -2,6 +2,7 @@ import csv
 import pickle
 import numpy as np
 from fABBA import fABBA
+from llmtime import serialize_arr, deserialize_str, SerializerSettings
 
 class BaseTimeSeriesPreTokenizer:
     def __init__(self):
@@ -57,9 +58,27 @@ class FABBAEncoder(BaseTimeSeriesPreTokenizer):
         else:
             raise ValueError("Decoder requires a previously fitted encoder.")
 
+class LLMTimeEncoder(BaseTimeSeriesPreTokenizer):
+    def __init__(self, settings=None):
+        super().__init__()
+        self.tokenizer_type = "LLMTime"
+        self.settings = settings if settings is not None else SerializerSettings()
+
+    def encode(self, time_series):
+        # Accepts numpy array as input
+        return serialize_arr(np.array(time_series), self.settings)
+
+    def decode(self, encoded_string, reference_point=None):
+        # reference_point is unused here but maintained for interface compatibility
+        return deserialize_str(encoded_string, self.settings)
+
 # Example usage:
-# encoder = FABBAEncoder(tol=0.1, alpha=0.1, sorting='2-norm', scl=1, verbose=0)
-# encoded = encoder.encode(some_time_series)
-# encoder.save_model()
-# encoder.load_model()
-# decoded = encoder.decode(encoded_string, reference_point=some_time_series[0])
+# fabba_encoder = FABBAEncoder(tol=0.1, alpha=0.1)
+# fabba_encoded = fabba_encoder.encode(some_time_series)
+# fabba_encoder.save_model()
+# fabba_encoder.load_model()
+# decoded = fabba_encoder.decode(fabba_encoded, reference_point=some_time_series[0])
+
+# llmtime_encoder = LLMTimeEncoder()
+# serialized = llmtime_encoder.encode(some_time_series)
+# deserialized = llmtime_encoder.decode(serialized)

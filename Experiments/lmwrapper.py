@@ -1,84 +1,132 @@
-import csv
-import pickle
-import numpy as np
-from fABBA import fABBA
-from llmtime import serialize_arr, deserialize_str, SerializerSettings
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
 
-class BaseTimeSeriesPreTokenizer:
-    def __init__(self):
-        self.tokenizer_type = "BaseClass"
-        self.encoder = None
+class CausalLMWrapper:
+    def __init__(self, 
+                 checkpoint: str,
+                 device: str = None,
+                 max_new_tokens: int = 250,
+                 temperature: float = 1.0,
+                 top_p: float = 0.9,
+                 use_auth_token: bool = False,
+                 access_token: str = None,
+                 truncate_if_exceeds: bool = True):
+        """
+        Initialize the CausalLMWrapper.
+        """
+        self.checkpoint = checkpoint
+        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.max_new_tokens = max_new_tokens
+        self.temperature = temperature
+        self.top_p = top_p
+        self.truncate_if_exceeds = truncate_if_exceeds
 
-    def encode(self, time_series):
-        raise NotImplementedError("Subclasses must implement 'encode' method.")
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            checkpoint,
+            use_auth_token=access_token if use_auth_token else None
+        )
+        self.model = AutoModelForCausalLM.from_pretrained(
+            checkpoint,
+            use_auth_token=access_token if use_auth_token else None
+        ).to(self.device)
 
-    def decode(self, encoded_string, reference_point):
-        raise NotImplementedError("Subclasses must implement 'decode' method.")
+        self.context_window = getattr(self.model.config, "max_position_embeddings", None)
+        if self.context_window is None:
+            print("Warning: Model context window (max_position_embeddings) not found in config.")
 
-    def save_encoded(self, encoded_list, output_path=None):
-        if output_path is None:
-            output_path = f"{self.tokenizer_type}_encoded_dataset.csv"
-        with open(output_path, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(["id", "encoded_string"])
-            for idx, code in enumerate(encoded_list):
-                writer.writerow([idx, code])
-        print(f"Encoded dataset saved to: {output_path}")
+        self.is_instruct = "-instruct" in checkpoint and hasattr(self.tokenizer, "apply_chat_template")
 
-    def save_model(self, filepath=None):
-        if self.encoder is None:
-            raise ValueError("Encoder must be fitted before saving.")
-        if filepath is None:
-            filepath = f"{self.tokenizer_type}_encoder.pkl"
-        with open(filepath, "wb") as f:
-            pickle.dump(self.encoder, f, protocol=pickle.HIGHEST_PROTOCOL)
-        print(f"Encoder saved to {filepath}")
+    def get_context_window(self) -> int:
+        """
+        Return the model's context window size.
+        """
+        return self.context_window
 
-    def load_model(self, filepath=None):
-        if filepath is None:
-            filepath = f"{self.tokenizer_type}_encoder.pkl"
-        with open(filepath, "rb") as f:
-            encoder = pickle.load(f)
-        self.encoder = encoder
-        print(f"Encoder loaded from {filepath}")
-
-class FABBAEncoder(BaseTimeSeriesPreTokenizer):
-    def __init__(self, **encoder_params):
-        super().__init__()
-        self.tokenizer_type = "fABBA"
-        self.encoder_params = encoder_params
-
-    def encode(self, time_series):
-        self.encoder = fABBA(**self.encoder_params)
-        return self.encoder.fit_transform(time_series)
-
-    def decode(self, encoded_string, reference_point):
-        if self.encoder is not None:
-            return self.encoder.inverse_transform(encoded_string, reference_point)
+    def generate_response(self, prompt: str) -> str:
+        """
+        Generate a response using a chat template if available and applicable.
+        """
+        if self.is_instruct:
+            messages = [{"role": "user", "content": prompt}]
+            input_ids = self.tokenizer.apply_chat_template(
+                messages,
+                tokenize=True,
+                return_tensors="pt"
+            ).to(self.device)
         else:
-            raise ValueError("Decoder requires a previously fitted encoder.")
+            input_ids = self.tokenizer.encode(prompt, return_tensors="pt").to(self.device)
 
-class LLMTimeEncoder(BaseTimeSeriesPreTokenizer):
-    def __init__(self, settings=None):
-        super().__init__()
-        self.tokenizer_type = "LLMTime"
-        self.settings = settings if settings is not None else SerializerSettings()
+        total_tokens = input_ids.shape[-1] + self.max_new_tokens
+        if self.context_window and total_tokens > self.context_window:
+            over_by = total_tokens - self.context_window
+            if self.truncate_if_exceeds:
+                print(f"Warning: Prompt and generation exceeds context window by {over_by} tokens. Truncating input.")
+                input_ids = input_ids[:, - (self.context_window - self.max_new_tokens):]
+            else:
+                print(f"Error: Prompt and {self.max_new_tokens} tokens exceeds context window of {self.context_window}.")
+                return "[ERROR] Input exceeds model's context window."
 
-    def encode(self, time_series):
-        # Accepts numpy array as input
-        return serialize_arr(np.array(time_series), self.settings)
+        outputs = self.model.generate(
+            input_ids,
+            max_new_tokens=self.max_new_tokens,
+            temperature=self.temperature,
+            top_p=self.top_p,
+            do_sample=True
+        )
 
-    def decode(self, encoded_string, reference_point=None):
-        # reference_point is unused here but maintained for interface compatibility
-        return deserialize_str(encoded_string, self.settings)
+        return self.tokenizer.decode(outputs[0], skip_special_tokens=False)
 
-# Example usage:
-# fabba_encoder = FABBAEncoder(tol=0.1, alpha=0.1)
-# fabba_encoded = fabba_encoder.encode(some_time_series)
-# fabba_encoder.save_model()
-# fabba_encoder.load_model()
-# decoded = fabba_encoder.decode(fabba_encoded, reference_point=some_time_series[0])
 
-# llmtime_encoder = LLMTimeEncoder()
-# serialized = llmtime_encoder.encode(some_time_series)
-# deserialized = llmtime_encoder.decode(serialized)
+def read_multiline_input(prompt: str = "Enter your prompt (end with empty line):") -> str:
+    print(prompt)
+    lines = []
+    while True:
+        try:
+            line = input()
+            if line.strip() == "":
+                break
+            lines.append(line)
+        except EOFError:
+            break
+    return "\n".join(lines)
+
+
+def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run a causal LM model interactively.")
+    parser.add_argument("--checkpoint", type=str, required=True, help="HuggingFace model checkpoint")
+    parser.add_argument("--max_new_tokens", type=int, default=250, help="Max tokens to generate")
+    parser.add_argument("--temperature", type=float, default=1.0, help="Sampling temperature")
+    parser.add_argument("--top_p", type=float, default=0.9, help="Top-p sampling threshold")
+    parser.add_argument("--access_token", type=str, default=None, help="Hugging Face access token if required")
+    parser.add_argument("--no_truncate", action="store_true", help="Disable truncating if prompt exceeds context window")
+
+    args = parser.parse_args()
+
+    model = CausalLMWrapper(
+        checkpoint=args.checkpoint,
+        max_new_tokens=args.max_new_tokens,
+        temperature=args.temperature,
+        top_p=args.top_p,
+        use_auth_token=bool(args.access_token),
+        access_token=args.access_token,
+        truncate_if_exceeds=not args.no_truncate
+    )
+
+    print(f"\nModel '{args.checkpoint}' loaded.")
+    print(f"Context window: {model.get_context_window()} tokens")
+    print("Use ctrl+c to quit.\n")
+
+    while True:
+        prompt = read_multiline_input()
+        response = model.generate_response(prompt)
+        print("\n##################################")
+        print("Model Response:")
+        print("##################################\n")
+        print(response + "\n")
+
+
+if __name__ == "__main__":
+    main()
+
