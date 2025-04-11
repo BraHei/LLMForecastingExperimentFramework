@@ -44,10 +44,10 @@ This project incorporates methods and code for data serialization and time serie
 
 This project uses publicly available datasets for training and evaluation:
 
-#### Kernel-Synth (Chronos LLM)
-- **Source:** Used for synthetic time series generation.
-- **Paper:**  
-  *Chronos: Learning the Language of Time Series* (2023).  
+#### Kernel-Synth from Chronos Forecasting
+- Code adapted from [amazon-science/chronos-forecasting](https://github.com/amazon-science/chronos-forecasting)
+- Licensed under the Apache License 2.0
+- Paper: *Chronos: Learning the Language of Time Series*  
   [arXiv:2306.03893](https://arxiv.org/abs/2306.03893)
 
 #### Nixtla Long Horizon Forecasting Dataset

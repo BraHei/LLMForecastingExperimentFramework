@@ -1,6 +1,6 @@
-# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-# SPDX-License-Identifier: Apache-2.0
-# source: https://github.com/amazon-science/chronos-forecasting/blob/94e20ea7e510ac4d665492b8bed8836a5143f16e/scripts/kernel-synth.py
+# Adapted from: https://github.com/amazon-science/chronos-forecasting/blob/main/scripts/kernel-synth.py
+# Original license: Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+# Changes made: [Brief description here]
 
 import argparse
 import functools
