@@ -3,7 +3,7 @@ import pickle
 from abc import ABC, abstractmethod
 import numpy as np
 from fABBA import fABBA
-from pretokenization.llmtime import serialize_arr, deserialize_str, SerializerSettings
+from src.pretokenizer_assets.llmtime import serialize_arr, deserialize_str, SerializerSettings
 
 class BaseTimeSeriesPreTokenizer(ABC):
     def __init__(self):

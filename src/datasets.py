@@ -7,7 +7,7 @@ from tqdm.auto import tqdm
 import pyarrow as pa
 import numpy as np
 
-from datasets.kernelsynth import generate_time_series
+from src.datasets_assets.kernelsynth import generate_time_series
 
 class BaseDataset(ABC):
     @abstractmethod
