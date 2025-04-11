@@ -72,7 +72,7 @@ MODEL_REGISTRY = {
     "smollm2-135m": "HuggingFaceTB/SmolLM2-135M",
 }
 
-def get_model(name: str, **kwargs) -> CausalLMWrapper:
+def get_model(name: str, **kwargs) -> LMWrapper:
     if name not in MODEL_REGISTRY:
         raise ValueError(f"Unknown model name: {name}. Available: {list(MODEL_REGISTRY.keys())}")
     return LMWrapper(checkpoint=MODEL_REGISTRY[name], **kwargs)
