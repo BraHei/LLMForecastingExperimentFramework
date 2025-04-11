@@ -1,8 +1,7 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
-import sys
 
-class CausalLMWrapper:
+class LMWrapper:
     def __init__(self, 
                  checkpoint: str,
                  device: str = None,
@@ -12,9 +11,6 @@ class CausalLMWrapper:
                  use_auth_token: bool = False,
                  access_token: str = None,
                  truncate_if_exceeds: bool = True):
-        """
-        Initialize the CausalLMWrapper.
-        """
         self.checkpoint = checkpoint
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.max_new_tokens = max_new_tokens
@@ -33,35 +29,27 @@ class CausalLMWrapper:
 
         self.context_window = getattr(self.model.config, "max_position_embeddings", None)
         if self.context_window is None:
-            print("Warning: Model context window (max_position_embeddings) not found in config.")
+            print("Warning: Model context window not found in config.")
 
         self.is_instruct = hasattr(self.tokenizer, "apply_chat_template")
 
     def get_context_window(self) -> int:
-        """
-        Return the model's context window size.
-        """
         return self.context_window
 
     def generate_response(self, prompt: str) -> str:
-        """
-        Generate a response using a chat template if available and applicable.
-        """
-        
         if self.is_instruct:
             messages = [{"role": "user", "content": prompt}]
             prompt = self.tokenizer.apply_chat_template(messages, tokenize=False)
-        
+
         input_ids = self.tokenizer.encode(prompt, return_tensors="pt").to(self.device)
 
         total_tokens = input_ids.shape[-1] + self.max_new_tokens
         if self.context_window and total_tokens > self.context_window:
             over_by = total_tokens - self.context_window
             if self.truncate_if_exceeds:
-                print(f"Warning: Prompt and generation exceeds context window by {over_by} tokens. Truncating input.")
-                input_ids = input_ids[:, - (self.context_window - self.max_new_tokens):]
+                print(f"Warning: Prompt exceeds context window by {over_by} tokens. Truncating input.")
+                input_ids = input_ids[:, -(self.context_window - self.max_new_tokens):]
             else:
-                print(f"Error: Prompt and {self.max_new_tokens} tokens exceeds context window of {self.context_window}.")
                 return "[ERROR] Input exceeds model's context window."
 
         outputs = self.model.generate(
@@ -74,70 +62,17 @@ class CausalLMWrapper:
 
         return self.tokenizer.decode(outputs[0], skip_special_tokens=False)
 
+MODEL_REGISTRY = {
+    "distilgpt2": "distilbert/distilgpt2",
+    "llama3-instruct": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+    "llama3": "meta-llama/Meta-Llama-3.1-8B",
+    "smollm2-1.7b-instruct": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
+    "smollm2-1.7b": "HuggingFaceTB/SmolLM2-1.7B",
+    "smollm2-135m-instruct": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "smollm2-135m": "HuggingFaceTB/SmolLM2-135M",
+}
 
-def read_multiline_input(prompt: str = "Enter your prompt (finish with empty line):") -> str:
-    print(prompt)
-    print("(Press Enter twice to submit input)")
-    lines = []
-    try:
-        while True:
-            print("> ", end="", flush=True)
-            line = sys.stdin.readline()
-            if not line:
-                break  # EOF
-            if line.strip() == "":
-                if lines:
-                    break  # End input after first empty line
-                else:
-                    print("(Empty input ignored. Type something or Ctrl+C to exit.)")
-                    continue
-            lines.append(line.rstrip("\n"))
-    except KeyboardInterrupt:
-        print("\nInterrupted by user.")
-        sys.exit(0)
-    return "\n".join(lines)
-
-def main():
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Run a causal LM model interactively.")
-    parser.add_argument("--checkpoint", type=str, required=True, help="HuggingFace model checkpoint")
-    parser.add_argument("--max_new_tokens", type=int, default=250, help="Max tokens to generate")
-    parser.add_argument("--temperature", type=float, default=1.0, help="Sampling temperature")
-    parser.add_argument("--top_p", type=float, default=0.9, help="Top-p sampling threshold")
-    parser.add_argument("--access_token", type=str, default=None, help="Hugging Face access token if required")
-    parser.add_argument("--no_truncate", action="store_true", help="Disable truncating if prompt exceeds context window")
-
-    args = parser.parse_args()
-
-    model = CausalLMWrapper(
-        checkpoint=args.checkpoint,
-        max_new_tokens=args.max_new_tokens,
-        temperature=args.temperature,
-        top_p=args.top_p,
-        use_auth_token=bool(args.access_token),
-        access_token=args.access_token,
-        truncate_if_exceeds=not args.no_truncate
-    )
-
-    print(f"\nModel '{args.checkpoint}' loaded.")
-    print(f"Context window: {model.get_context_window()} tokens")
-    print("Use ctrl+c to quit.\n")
-
-    while True:
-        prompt = read_multiline_input()
-        print("\n##################################")
-        print("Model Input:")
-        print("##################################\n")
-        print(prompt)
-        
-        response = model.generate_response(prompt)
-        print("\n##################################")
-        print("Model Response:")
-        print("##################################\n")
-        print(response + "\n")
-
-
-if __name__ == "__main__":
-    main()
-
+def get_model(name: str, **kwargs) -> CausalLMWrapper:
+    if name not in MODEL_REGISTRY:
+        raise ValueError(f"Unknown model name: {name}. Available: {list(MODEL_REGISTRY.keys())}")
+    return LMWrapper(checkpoint=MODEL_REGISTRY[name], **kwargs)

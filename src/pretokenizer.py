@@ -1,19 +1,22 @@
 import csv
 import pickle
+from abc import ABC, abstractmethod
 import numpy as np
 from fABBA import fABBA
-from llmtime import serialize_arr, deserialize_str, SerializerSettings
+from pretokenization.llmtime import serialize_arr, deserialize_str, SerializerSettings
 
-class BaseTimeSeriesPreTokenizer:
+class BaseTimeSeriesPreTokenizer(ABC):
     def __init__(self):
         self.tokenizer_type = "BaseClass"
         self.encoder = None
 
+    @abstractmethod
     def encode(self, time_series):
-        raise NotImplementedError("Subclasses must implement 'encode' method.")
+        pass
 
+    @abstractmethod
     def decode(self, encoded_string, reference_point):
-        raise NotImplementedError("Subclasses must implement 'decode' method.")
+        pass
 
     def save_encoded(self, encoded_list, output_path=None):
         if output_path is None:
@@ -58,6 +61,7 @@ class FABBAEncoder(BaseTimeSeriesPreTokenizer):
         else:
             raise ValueError("Decoder requires a previously fitted encoder.")
 
+
 class LLMTimeEncoder(BaseTimeSeriesPreTokenizer):
     def __init__(self, settings=None):
         super().__init__()
@@ -65,20 +69,19 @@ class LLMTimeEncoder(BaseTimeSeriesPreTokenizer):
         self.settings = settings if settings is not None else SerializerSettings()
 
     def encode(self, time_series):
-        # Accepts numpy array as input
         return serialize_arr(np.array(time_series), self.settings)
 
     def decode(self, encoded_string, reference_point=None):
-        # reference_point is unused here but maintained for interface compatibility
         return deserialize_str(encoded_string, self.settings)
 
-# Example usage:
-# fabba_encoder = FABBAEncoder(tol=0.1, alpha=0.1)
-# fabba_encoded = fabba_encoder.encode(some_time_series)
-# fabba_encoder.save_model()
-# fabba_encoder.load_model()
-# decoded = fabba_encoder.decode(fabba_encoded, reference_point=some_time_series[0])
 
-# llmtime_encoder = LLMTimeEncoder()
-# serialized = llmtime_encoder.encode(some_time_series)
-# deserialized = llmtime_encoder.decode(serialized)
+PRETOKENIZER_REGISTRY = {
+    "fABBA": FABBAEncoder,
+    "LLMTime": LLMTimeEncoder,
+}
+
+def get_pretokenizer(name: str, **kwargs) -> BaseTimeSeriesPreTokenizer:
+    if name not in PRETOKENIZER_REGISTRY:
+        raise ValueError(f"Unknown pretokenizer: {name}. Available: {list(PRETOKENIZER_REGISTRY.keys())}")
+    return PRETOKENIZER_REGISTRY[name](**kwargs)
+
