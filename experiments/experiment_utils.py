@@ -35,7 +35,8 @@ def save_experiment_settings(output_folder, model, tokenizer, dataset):
 def inverse_transform_safe(encoder, encoded_str, start_value=None):
     try:
         return encoder.decode(encoded_str, reference_point=start_value), True
-    except Exception:
+    except Exception as e:
+        print(e)
         return None, False
 
 

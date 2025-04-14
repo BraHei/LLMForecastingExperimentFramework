@@ -52,6 +52,7 @@ class FABBAEncoder(BaseTimeSeriesPreTokenizer):
         super().__init__()
         self.tokenizer_type = "fABBA"
         self.encoder_params = encoder_params
+        self.model_params = None
 
     def encode(self, time_series):
         self.encoder = fABBA(**self.encoder_params)
@@ -59,7 +60,7 @@ class FABBAEncoder(BaseTimeSeriesPreTokenizer):
 
     def decode(self, encoded_string, reference_point):
         if self.encoder is not None:
-            return self.encoder.inverse_transform(encoded_string, reference_point)
+            return self.encoder.inverse_transform(encoded_string, start = reference_point)
         else:
             raise ValueError("Decoder requires a previously fitted encoder.")
 
@@ -72,14 +73,16 @@ class LLMABBAEncoder(BaseTimeSeriesPreTokenizer):
         self.encoder_params = encoder_params
 
     def encode(self, time_series):
+        time_series = np.asarray(time_series)
+
         self.encoder = LLMABBA(**self.encoder_params)
         encoded_array = self.encoder.encode([time_series.tolist()])[0]
-        return ''.join(encoded_array)  # Single string output
+        return ''.join(encoded_array)
 
-    def decode(self, encoded_string):
+    def decode(self, encoded_string, reference_point=None):
         if self.encoder is not None:
             symbol_list = list(encoded_string)  # Split into list of characters
-            return self.encoder.decode([symbol_list])[0]
+            return self.encoder.decode([symbol_list])
         else:
             raise ValueError("Decoder requires a previously fitted encoder.")
 

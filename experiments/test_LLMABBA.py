@@ -45,25 +45,17 @@ def main():
 
     for idx, ts in enumerate(ts_list):
         ts_data = ts["target"]
+
         data_string = tokenizer.encode(ts_data)
         model_response = model.generate_response(data_string)
 
-        reconstructed, rec_success = inverse_transform_safe(tokenizer, data_string, ts_data[0])
-        predicted, pred_success = inverse_transform_safe(tokenizer, model_response, ts_data[-1])
+        reconstructed, rec_success = inverse_transform_safe(tokenizer, data_string)
+        predicted, pred_success = inverse_transform_safe(tokenizer, model_response)
 
-        # try:
-        #     reconstructed = tokenizer.decode(data_string)
-        #     rec_success = True
-        # except Exception:
-        #     reconstructed = None
-        #     rec_success = False
+        difference = set(model_response) - set(data_string)
 
-        # try:
-        #     predicted = tokenizer.decode(model_response[0])
-        #     pred_success = True
-        # except Exception:
-        #     predicted = None
-        #     pred_success = False
+        if (len(difference) > 0):
+            print(f"Model introduced the tokens: {difference}")
 
         plot_path = plot_series(idx, ts_data, reconstructed or ts_data, predicted, pred_success, OUTPUT_FOLDER)
 
@@ -80,7 +72,7 @@ def main():
             f.write(json.dumps(result) + "\n")
 
     fix_output_ownership(Path(OUTPUT_FOLDER))
-    print("Experiment 2 complete.")
+    print(f"Experiment {EXPERIMENT_NAME} complete.")
 
 if __name__ == "__main__":
     main()

@@ -67,7 +67,7 @@ class LMWrapper:
                             outputs[:, input_ids.shape[1]:],
                             skip_special_tokens = True)
 
-        return predictions
+        return predictions[0]
     
 MODEL_REGISTRY = {
     "distilgpt2": "distilbert/distilgpt2",

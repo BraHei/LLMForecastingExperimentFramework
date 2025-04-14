@@ -64,7 +64,7 @@ def main():
             f.write(json.dumps(result) + "\n")
 
     fix_output_ownership(Path(OUTPUT_FOLDER))
-    print("Experiment 1 complete.")
+    print(f"Experiment {EXPERIMENT_NAME} complete.")
 
 if __name__ == "__main__":
     main()

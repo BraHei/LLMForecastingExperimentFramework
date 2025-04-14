@@ -40,14 +40,37 @@ class NixtlaDataset(BaseDataset):
         }
 
 class KernelSynthDataset(BaseDataset):
-    def __init__(self, num_series: int = 100, max_kernels: int = 5, sequence_lenght: int = 1024, n_jobs: int = -1):
+    def __init__(
+        self,
+        num_series: int = 100,
+        max_kernels: int = 5,
+        sequence_lenght: int = 1024,
+        n_jobs: int = -1,
+        save: bool = True
+    ):
         self.num_series = num_series
         self.max_kernels = max_kernels
         self.sequence_lenght = sequence_lenght
         self.n_jobs = n_jobs
+        self.save = save
+
+        # Determine base directory and file path
+        base_dir = Path(__file__).parent / "synthetic"
+        base_dir.mkdir(parents=True, exist_ok=True)
+
+        self.file_path = (
+            base_dir /
+            f"kernel_synth_{num_series}_{max_kernels}_{sequence_lenght}.arrow"
+        )
 
     def load(self):
+        # Try loading if file exists
+        if self.file_path.exists():
+            print(f"Loading pre-generated dataset from {self.file_path}")
+            return pa.ipc.open_file(self.file_path).read_all().to_pylist()
 
+        # Otherwise, generate the dataset
+        print("Generating synthetic dataset...")
         results = Parallel(n_jobs=self.n_jobs, verbose=0)(
             delayed(generate_time_series)(
                 max_kernels=self.max_kernels,
@@ -56,7 +79,14 @@ class KernelSynthDataset(BaseDataset):
             for _ in tqdm(range(self.num_series), desc="KernelSynth", leave=False)
         )
 
-        print("Parallel generation complete.")
+        # Save to file if enabled
+        if self.save:
+            print(f"Saving dataset to {self.file_path}")
+            table = pa.Table.from_pylist(results)
+            with self.file_path.open("wb") as f:
+                with pa.ipc.new_file(f, table.schema) as writer:
+                    writer.write_table(table)
+
         return results
 
     def metadata(self):
@@ -68,7 +98,8 @@ class KernelSynthDataset(BaseDataset):
                 "num_series": self.num_series,
                 "max_kernels": self.max_kernels,
                 "sequence_lenght": self.sequence_lenght,
-                "n_jobs": self.n_jobs
+                "n_jobs": self.n_jobs,
+                "save": self.save
             },
         }
 
