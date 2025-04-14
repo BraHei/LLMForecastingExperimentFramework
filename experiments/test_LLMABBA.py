@@ -1,155 +1,71 @@
-import csv
-import json
-import numpy as np
-import matplotlib.pyplot as plt
-from pathlib import Path
-import time
 import os
-
+import time
+import json
+import sys
+import numpy as np
+from pathlib import Path
 from src.datasets import get_dataset
 from src.pretokenizer import get_pretokenizer
 from src.lmwrapper import get_model
+from experiment_utils import (
+    inverse_transform_safe,
+    save_experiment_settings,
+    plot_series,
+    fix_output_ownership
+)
 
-timestamp = time.strftime('%Y%m%d-%H%M%S')
+np.set_printoptions(threshold=sys.maxsize)
 
 # === Settings ===
-EXPERMIMENT_NAME = "test_framework"
+EXPERIMENT_NAME = "LLM-ABBA_pretokenizer"
+CHECKPOINT_NAME = "smollm2-1.7b"
 OUTPUT_JSONL = "model_responses.jsonl"
-OUTPUT_FOLDER = f"{EXPERMIMENT_NAME}_{timestamp}"
-Path(OUTPUT_FOLDER).mkdir(exist_ok=True)
-
-CHECKPOINT_NAME = "smollm2-135m"
 NUM_SERIES = 10
 MAX_KERNELS = 5
-SEQUENCE_LENGHT = 4096
-
-PRETOKENIZER = "LLM-ABBA"
+SEQUENCE_LENGTH = 4096
+TOKENIZER_NAME = "LLM-ABBA"
 TOLERANCE = 0.1
 ALPHA = 0.1
 
-import sys
-np.set_printoptions(threshold=sys.maxsize)
+timestamp = time.strftime('%Y%m%d-%H%M%S')
+OUTPUT_FOLDER = f"{EXPERIMENT_NAME}_{timestamp}"
+Path(OUTPUT_FOLDER).mkdir(exist_ok=True)
 
-# === Step 1: Generate Synthetic Time Series ===
-print("[Step 1] Generating synthetic time series...")
-dataset = get_dataset("kernelsynth", num_series=NUM_SERIES, max_kernels=MAX_KERNELS, sequence_lenght=SEQUENCE_LENGHT)
+# === Load components ===
+dataset = get_dataset("kernelsynth", num_series=NUM_SERIES, max_kernels=MAX_KERNELS, sequence_lenght=SEQUENCE_LENGTH)
 ts_list = dataset.load()
-print(f"  -> Loaded {len(ts_list)} time series.")
 
-# === Step 2: Initialize Pretokenizer ===
-print(f"[Step 2] Initializing pretokenizer: {PRETOKENIZER}...")
-tokenizer = get_pretokenizer(PRETOKENIZER, tol=TOLERANCE, alpha=ALPHA)
-
-# === Step 3: Load LLM ===
-print(f"[Step 3] Loading language model: {CHECKPOINT_NAME}...")
+tokenizer = get_pretokenizer(TOKENIZER_NAME, tol=TOLERANCE, alpha=ALPHA)
 model = get_model(CHECKPOINT_NAME, max_new_tokens=100, temperature=1.0, top_p=0.9)
-print("  -> Model loaded successfully.")
 
-# === Save the experiment settings ===
-def save_experiment_settings(output_folder, model, tokenizer, dataset):
-    settings = {
-        "model": {
-            "checkpoint": model.checkpoint,
-            "max_new_tokens": model.max_new_tokens,
-            "temperature": model.temperature,
-            "top_p": model.top_p,
-            "context_window": model.context_window,
-            "device": model.device
-        },
-        "tokenizer": {
-            "type": tokenizer.tokenizer_type,
-        },
-        "dataset": dataset.metadata()
-    }
-
-    # Add encoder-specific parameters if available
-    if hasattr(tokenizer, "encoder_params"):
-        settings["tokenizer"]["params"] = tokenizer.encoder_params
-    if hasattr(tokenizer, "settings"):
-        # Convert settings object to dict if it has __dict__
-        settings["tokenizer"]["settings"] = (
-            vars(tokenizer.settings) if hasattr(tokenizer.settings, "__dict__") else tokenizer.settings
-        )
-
-    settings_path = Path(output_folder) / "settings_overview.json"
-    with open(settings_path, "w") as f:
-        json.dump(settings, f, indent=4)
-
-# === Plotting ===
-def plot_series(idx, original, reconstruction, prediction, success):
-    plt.figure(figsize=(10, 4))
-    plt.plot(original, label="Original")
-    plt.plot(reconstruction, label="Reconstruction")
-    if success and prediction is not None:
-        plt.plot(range(len(original), len(original) + len(prediction)), prediction, label="Prediction")
-    else:
-        plt.title("Prediction failed (malformed output)")
-    plt.legend()
-    plt.grid(True)
-    path = f"{OUTPUT_FOLDER}/plot_{idx}.png"
-    plt.savefig(path)
-    plt.close()
-    return path
-
-# === Fix output folder ownership ===
-
-def fix_output_ownership(folder: Path):
-    """If HOST_UID and HOST_GID are set, change ownership of OUTPUT_FOLDER recursively."""
-    try:
-        uid = int(os.environ.get("HOST_UID", -1))
-        gid = int(os.environ.get("HOST_GID", -1))
-        if uid < 0 or gid < 0:
-            print("[Info] HOST_UID or HOST_GID not set; skipping ownership fix.")
-            return
-
-        print(f"[Info] Fixing ownership of {folder} to UID={uid}, GID={gid}...")
-        for root, dirs, files in os.walk(folder):
-            for name in dirs + files:
-                path = os.path.join(root, name)
-                try:
-                    os.chown(path, uid, gid)
-                except PermissionError as e:
-                    print(f"[Warning] Could not change ownership of {path}: {e}")
-        os.chown(folder, uid, gid)
-    except Exception as e:
-        print(f"[Warning] Ownership fix failed: {e}")
-
-# === Run Experiment ===
 def main():
-    print("[Step 4] Starting main experiment loop...\n")
     results = []
-
     jsonl_path = os.path.join(OUTPUT_FOLDER, OUTPUT_JSONL)
-
-    # Save settings overview
     save_experiment_settings(OUTPUT_FOLDER, model, tokenizer, dataset)
 
     for idx, ts in enumerate(ts_list):
-        print(f"Processing time series {idx + 1}/{len(ts_list)}...")
         ts_data = ts["target"]
-
         data_string = tokenizer.encode(ts_data)
         model_response = model.generate_response(data_string)
 
-        reconstructed = None
-        rec_success = True
+        reconstructed, rec_success = inverse_transform_safe(tokenizer, data_string, ts_data[0])
+        predicted, pred_success = inverse_transform_safe(tokenizer, model_response, ts_data[-1])
 
-        try:
-            reconstructed = tokenizer.decode(data_string)
-        except Exception:
-            rec_success = False
-            print("Failed to decode reconstruction")
+        # try:
+        #     reconstructed = tokenizer.decode(data_string)
+        #     rec_success = True
+        # except Exception:
+        #     reconstructed = None
+        #     rec_success = False
 
-        predicted = None
-        pred_success = True
+        # try:
+        #     predicted = tokenizer.decode(model_response[0])
+        #     pred_success = True
+        # except Exception:
+        #     predicted = None
+        #     pred_success = False
 
-        try:
-            predicted = tokenizer.decode(model_response[0])
-        except Exception:
-            pred_success = False
-            print("Failed to decode prediction")
-
-        plot_path = plot_series(idx, ts_data, reconstructed if rec_success else ts, predicted, pred_success)
+        plot_path = plot_series(idx, ts_data, reconstructed or ts_data, predicted, pred_success, OUTPUT_FOLDER)
 
         result = {
             "id": idx,
@@ -160,14 +76,11 @@ def main():
         }
 
         results.append(result)
-
-        # Append each result to the JSON Line
         with open(jsonl_path, mode="a") as f:
             f.write(json.dumps(result) + "\n")
 
-    fix_output_ownership(OUTPUT_FOLDER)
+    fix_output_ownership(Path(OUTPUT_FOLDER))
+    print("Experiment 2 complete.")
 
-    print(f"\nDone. Results saved to '{OUTPUT_JSONL}', plots saved to '{OUTPUT_FOLDER}/'.")
-    
 if __name__ == "__main__":
     main()
