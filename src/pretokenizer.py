@@ -3,6 +3,7 @@ import pickle
 from abc import ABC, abstractmethod
 import numpy as np
 from fABBA import fABBA
+from llmabba import ABBA as LLMABBA
 from src.pretokenizer_assets.llmtime import serialize_arr, deserialize_str, SerializerSettings
 
 class BaseTimeSeriesPreTokenizer(ABC):
@@ -45,6 +46,7 @@ class BaseTimeSeriesPreTokenizer(ABC):
         self.encoder = encoder
         print(f"Encoder loaded from {filepath}")
 
+
 class FABBAEncoder(BaseTimeSeriesPreTokenizer):
     def __init__(self, **encoder_params):
         super().__init__()
@@ -62,6 +64,27 @@ class FABBAEncoder(BaseTimeSeriesPreTokenizer):
             raise ValueError("Decoder requires a previously fitted encoder.")
 
 
+# Can be improved later on for parallel processing
+class LLMABBAEncoder(BaseTimeSeriesPreTokenizer):
+    def __init__(self, **encoder_params):
+        super().__init__()
+        self.tokenizer_type = "LLM-ABBA"
+        self.encoder_params = encoder_params
+
+    def encode(self, time_series):
+        self.encoder = LLMABBA(**self.encoder_params)
+        encoded_array = self.encoder.encode([time_series.tolist()])[0]
+        return ''.join(encoded_array)  # Single string output
+
+    def decode(self, encoded_string):
+        if self.encoder is not None:
+            symbol_list = list(encoded_string)  # Split into list of characters
+            return self.encoder.decode([symbol_list])[0]
+        else:
+            raise ValueError("Decoder requires a previously fitted encoder.")
+
+
+
 class LLMTimeEncoder(BaseTimeSeriesPreTokenizer):
     def __init__(self, settings=None):
         super().__init__()
@@ -77,6 +100,7 @@ class LLMTimeEncoder(BaseTimeSeriesPreTokenizer):
 
 PRETOKENIZER_REGISTRY = {
     "fABBA": FABBAEncoder,
+    "LLM-ABBA": LLMABBAEncoder,
     "LLMTime": LLMTimeEncoder,
 }
 

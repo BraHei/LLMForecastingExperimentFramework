@@ -10,14 +10,15 @@ class LMWrapper:
                  top_p: float = 0.9,
                  use_auth_token: bool = False,
                  access_token: str = None,
-                 truncate_if_exceeds: bool = True):
+                 truncate_if_exceeds: bool = True,
+                 do_sample: bool = False):
         self.checkpoint = checkpoint
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.max_new_tokens = max_new_tokens
         self.temperature = temperature
         self.top_p = top_p
         self.truncate_if_exceeds = truncate_if_exceeds
-
+        self.do_sample = do_sample
         self.tokenizer = AutoTokenizer.from_pretrained(
             checkpoint,
             use_auth_token=access_token if use_auth_token else None
@@ -58,7 +59,7 @@ class LMWrapper:
             max_new_tokens=self.max_new_tokens,
             temperature=self.temperature,
             top_p=self.top_p,
-            do_sample=True
+            do_sample=self.do_sample
         )
 
 

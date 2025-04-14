@@ -18,10 +18,10 @@ OUTPUT_JSONL = "model_responses.jsonl"
 OUTPUT_FOLDER = f"{EXPERMIMENT_NAME}_{timestamp}"
 Path(OUTPUT_FOLDER).mkdir(exist_ok=True)
 
-CHECKPOINT_NAME = "smollm2-135m"
-NUM_SERIES = 3
+CHECKPOINT_NAME = "smollm2-1.7b"
+NUM_SERIES = 10
 MAX_KERNELS = 5
-SEQUENCE_LENGHT = 1024
+SEQUENCE_LENGHT = 4096
 
 # === Step 1: Generate Synthetic Time Series ===
 print("[Step 1] Generating synthetic time series...")
@@ -154,7 +154,7 @@ def main():
             f.write(json.dumps(result) + "\n")
 
     fix_output_ownership(OUTPUT_FOLDER)
-    
+
     print(f"\nDone. Results saved to '{OUTPUT_JSONL}', plots saved to '{OUTPUT_FOLDER}/'.")
     
 if __name__ == "__main__":
