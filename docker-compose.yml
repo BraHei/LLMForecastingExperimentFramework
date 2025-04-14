@@ -1,6 +1,8 @@
 x-common-setup: &common-setup
   volumes:
     - .:/workspace
+    - hf_cache:/root/.cache/huggingface
+    - torch_cache:/root/.cache/torch
   working_dir: /workspace
   stdin_open: true
   tty: true
@@ -9,7 +11,6 @@ x-common-setup: &common-setup
     - PYTHONUNBUFFERED=1
     - HOST_UID=${UID}
     - HOST_GID=${GID}
-  user: "${UID}:${GID}"
 
 services:
   dev-cpu:
@@ -38,3 +39,7 @@ services:
     ipc: host
     shm_size: 8g
     profiles: ["gpu"]
+
+volumes:
+  hf_cache:
+  torch_cache:

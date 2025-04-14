@@ -4,7 +4,7 @@ FROM pytorch/pytorch:latest
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install system tools
+# Install system tools and gosu
 RUN apt-get update && apt-get install -y \
     git vim curl wget htop build-essential python3-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -19,7 +19,6 @@ RUN pip install -r requirements.txt --constraint=torch_version.txt
 # Set working directory
 WORKDIR /workspace
 ENV PYTHONPATH=/workspace
-	
-# Default to bash
-CMD ["/bin/bash"]
 
+# Default command (optional override via `docker run`)
+CMD ["/bin/bash"]

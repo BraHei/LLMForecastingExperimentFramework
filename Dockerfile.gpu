@@ -4,11 +4,10 @@ FROM rocm/pytorch:latest
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install system tools
+# Install system tools and gosu
 RUN apt-get update && apt-get install -y \
     git vim curl wget htop build-essential python3-dev \
     && rm -rf /var/lib/apt/lists/*
-
 
 # Install Python dependencies globally
 RUN pip freeze | grep torch > torch_version.txt
@@ -21,6 +20,5 @@ RUN pip install -r requirements.txt --constraint=torch_version.txt
 WORKDIR /workspace
 ENV PYTHONPATH=/workspace
 
-# Default to bash
+# Default command (optional override via `docker run`)
 CMD ["/bin/bash"]
-

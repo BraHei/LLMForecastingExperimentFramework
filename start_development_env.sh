@@ -1,8 +1,11 @@
 #!/bin/bash
 
-# Set user ID so file saving is fixed
-export UID=$(id -u)
-export GID=$(id -g)
+# Exit on error
+set -e
+
+# Write UID/GID into .env so Compose can pick them up
+echo "UID=$(id -u)" > .env
+echo "GID=$(id -g)" >> .env
 
 if [ -e /dev/kfd ]; then
     echo "Using ROCm GPU environment"
@@ -11,4 +14,3 @@ else
     echo "Using CPU environment"
     docker compose --profile cpu run --build --rm dev-cpu
 fi
-
