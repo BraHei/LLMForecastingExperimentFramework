@@ -1,32 +1,31 @@
+x-common-setup: &common-setup
+  volumes:
+    - .:/workspace
+  working_dir: /workspace
+  stdin_open: true
+  tty: true
+  command: /bin/bash
+  environment:
+    - PYTHONUNBUFFERED=1
+    - HOST_UID=${UID}
+    - HOST_GID=${GID}
+  user: "${UID}:${GID}"
+
 services:
   dev-cpu:
+    <<: *common-setup
     build:
       context: .
       dockerfile: Dockerfile.cpu
-    image: my-project:cpu
-    volumes:
-      - .:/workspace
-    working_dir: /workspace
-    stdin_open: true
-    tty: true
-    command: /bin/bash
-    environment:
-      - PYTHONUNBUFFERED=1
+    image: llmtimeseries:cpu
     profiles: ["cpu"]
 
   dev-gpu:
+    <<: *common-setup
     build:
       context: .
       dockerfile: Dockerfile.gpu
-    image: my-project:gpu
-    volumes:
-      - .:/workspace
-    working_dir: /workspace
-    stdin_open: true
-    tty: true
-    command: /bin/bash
-    environment:
-      - PYTHONUNBUFFERED=1
+    image: llmtimeseries:gpu
     cap_add:
       - SYS_PTRACE
     security_opt:
@@ -39,4 +38,3 @@ services:
     ipc: host
     shm_size: 8g
     profiles: ["gpu"]
-
