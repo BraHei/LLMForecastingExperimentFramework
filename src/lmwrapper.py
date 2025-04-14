@@ -61,8 +61,13 @@ class LMWrapper:
             do_sample=True
         )
 
-        return self.tokenizer.decode(outputs[0], skip_special_tokens=False)
 
+        predictions = self.tokenizer.batch_decode(
+                            outputs[:, input_ids.shape[1]:],
+                            skip_special_tokens = True)
+
+        return predictions
+    
 MODEL_REGISTRY = {
     "distilgpt2": "distilbert/distilgpt2",
     "llama3-instruct": "meta-llama/Meta-Llama-3.1-8B-Instruct",

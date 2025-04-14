@@ -2,20 +2,26 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
+import time
+import os
 
 from src.datasets import get_dataset
 from src.pretokenizer import get_pretokenizer
 from src.lmwrapper import get_model
 
+timestamp = time.strftime('%Y%m%d-%H%M%S')
+
 # === Settings ===
+EXPERMIMENT_NAME = "test_framework"
+OUTPUT_CSV = "model_responses.csv"
+OUTPUT_FOLDER = f"{EXPERMIMENT_NAME}_{timestamp}"
+Path(OUTPUT_FOLDER).mkdir(exist_ok=True)
+
 CHECKPOINT_NAME = "smollm2-135m"
 DEVICE = "cpu"
 NUM_SERIES = 3
-MAX_KERNELS = 2
-SEQUENCE_LENGHT = 1024
-OUTPUT_CSV = "model_responses.csv"
-PLOT_FOLDER = "plots"
-Path(PLOT_FOLDER).mkdir(exist_ok=True)
+MAX_KERNELS = 1
+SEQUENCE_LENGHT = 4096
 
 # === Step 1: Generate Synthetic Time Series ===
 print("[Step 1] Generating synthetic time series...")
@@ -54,15 +60,24 @@ def plot_series(idx, original, reconstruction, prediction, success):
         plt.title("Prediction failed (malformed output)")
     plt.legend()
     plt.grid(True)
-    path = f"{PLOT_FOLDER}/plot_{idx}.png"
+    path = f"{OUTPUT_FOLDER}/plot_{idx}.png"
     plt.savefig(path)
     plt.close()
     return path
 
 # === Run Experiment ===
+
 def main():
     print("[Step 4] Starting main experiment loop...\n")
     results = []
+
+    csv_path = os.path.join(OUTPUT_FOLDER, OUTPUT_CSV)
+    # Write header once at the beginning
+    with open(csv_path, mode="w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=[
+            "id", "original_string", "model_response", "inverse_success", "plot_path"
+        ])
+        writer.writeheader()
 
     for idx, ts in enumerate(ts_list):
         print(f"Processing time series {idx + 1}/{len(ts_list)}...")
@@ -75,23 +90,24 @@ def main():
 
         plot_path = plot_series(idx, ts_data, reconstructed if rec_success else ts, predicted, pred_success)
 
-        results.append({
+        result = {
             "id": idx,
             "original_string": data_string,
             "model_response": model_response,
             "inverse_success": pred_success,
             "plot_path": plot_path
-        })
+        }
 
-    print("\n[Step 5] Saving results to CSV...")
-    with open(OUTPUT_CSV, mode="w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=[
-            "id", "original_string", "model_response", "inverse_success", "plot_path"
-        ])
-        writer.writeheader()
-        writer.writerows(results)
+        results.append(result)
 
-    print(f"\nDone. Results saved to '{OUTPUT_CSV}', plots saved to '{PLOT_FOLDER}/'.")
+        # Append each result to the CSV
+        with open(csv_path, mode="a", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=[
+                "id", "original_string", "model_response", "inverse_success", "plot_path"
+            ])
+            writer.writerow(result)
 
+    print(f"\nDone. Results appended to '{OUTPUT_CSV}', plots saved to '{OUTPUT_FOLDER}/'.")
+    
 if __name__ == "__main__":
     main()
