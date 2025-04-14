@@ -22,20 +22,20 @@ This project incorporates methods and code for data serialization and time serie
 - **Code used:** `serialize.py` and associated serialization logic, adapted under the [MIT License](https://github.com/ngruver/llmtime/blob/main/LICENSE).
 - **Paper:**  
   Gruver et al. (2023).  
-  *LLMTime: Benchmarking Language Models on Temporal Understanding*.  
+  *Large Language Models Are Zero Shot Time Series Forecasters*.  
   [arXiv:2310.07820](https://arxiv.org/abs/2310.07820)
 
 #### fABBA
 - **Repository:** [https://github.com/nla-group/fABBA](https://github.com/nla-group/fABBA)
 - **Code used:** fABBA segmentation method for symbolic representation.
 - **Paper:**  
-  Lemire et al. (2020).  
-  *fABBA: Fast Adaptive Bivariate Piecewise Approximation of Time Series*.  
+  Elsworth et al. (2020).  
+  *ABBA: Adaptive Brownian bridge-based symbolic aggregation of time series*.  
   [arXiv:2003.12469](https://arxiv.org/pdf/2003.12469)
 
-#### Temporal Reasoning Inspiration
+#### LLM-ABBA
 - **Conceptual framework** influenced by:  
-  *Language Models are Temporal Reasoners* (2024).  
+  *LLM-ABBA: Understanding time series via symbolic approximation* (2024).  
   [arXiv:2411.18506v2](https://arxiv.org/pdf/2411.18506v2)
 
 ---
