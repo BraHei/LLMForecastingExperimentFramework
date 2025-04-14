@@ -13,7 +13,7 @@ from experiment_utils import (
 )
 
 # === Settings ===
-EXPERIMENT_NAME = "test_framework"
+EXPERIMENT_NAME = "fABBA_pretokenizer"
 CHECKPOINT_NAME = "smollm2-1.7b"
 OUTPUT_JSONL = "model_responses.jsonl"
 NUM_SERIES = 10
