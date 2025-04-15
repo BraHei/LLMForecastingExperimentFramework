@@ -13,17 +13,18 @@ from experiment_utils import (
 )
 
 # === Settings ===
-EXPERIMENT_NAME = "fABBA_pretokenizer"
 CHECKPOINT_NAME = "smollm2-1.7b"
+MAX_NEW_TOKENS = 50
 OUTPUT_JSONL = "model_responses.jsonl"
 NUM_SERIES = 10
 MAX_KERNELS = 5
-SEQUENCE_LENGTH = 4096
+SEQUENCE_LENGTH = 512
 TOKENIZER_NAME = "fABBA"
 TOLERANCE = 0.1
 ALPHA = 0.1
 SORTING = '2-norm'
 SCL = 1
+EXPERIMENT_NAME = f"PTOK-{TOKENIZER_NAME}_LLM-{CHECKPOINT_NAME}_NTOK{MAX_NEW_TOKENS}_MKER{MAX_KERNELS}_SLEN{SEQUENCE_LENGTH}"
 
 timestamp = time.strftime('%Y%m%d-%H%M%S')
 OUTPUT_FOLDER = f"results/{EXPERIMENT_NAME}_{timestamp}"
@@ -34,7 +35,7 @@ dataset = get_dataset("kernelsynth", num_series=NUM_SERIES, max_kernels=MAX_KERN
 ts_list = dataset.load()
 
 tokenizer = get_pretokenizer(TOKENIZER_NAME, tol=TOLERANCE, alpha=ALPHA, sorting=SORTING, scl=SCL, verbose=0)
-model = get_model(CHECKPOINT_NAME, max_new_tokens=100, temperature=1.0, top_p=0.9)
+model = get_model(CHECKPOINT_NAME, max_new_tokens=MAX_NEW_TOKENS, temperature=1.0, top_p=0.9)
 
 def main():
     results = []
@@ -49,7 +50,7 @@ def main():
         reconstructed, rec_success = inverse_transform_safe(tokenizer, data_string, ts_data[0])
         predicted, pred_success = inverse_transform_safe(tokenizer, model_response, ts_data[-1])
 
-        plot_path = plot_series(idx, ts_data, reconstructed or ts_data, predicted, pred_success, OUTPUT_FOLDER)
+        plot_path = plot_series(idx, ts_data, reconstructed, predicted, pred_success, OUTPUT_FOLDER)
 
         result = {
             "id": idx,

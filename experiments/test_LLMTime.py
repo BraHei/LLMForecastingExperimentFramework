@@ -1,20 +1,16 @@
 import os
 import time
 import json
-import sys
-import numpy as np
 from pathlib import Path
 from src.datasets import get_dataset
 from src.pretokenizer import get_pretokenizer
 from src.lmwrapper import get_model
 from experiment_utils import (
-    inverse_transform_safe,
     save_experiment_settings,
+    inverse_transform_safe,
     plot_series,
     fix_output_ownership
 )
-
-np.set_printoptions(threshold=sys.maxsize)
 
 # === Settings ===
 CHECKPOINT_NAME = "smollm2-1.7b"
@@ -23,9 +19,7 @@ OUTPUT_JSONL = "model_responses.jsonl"
 NUM_SERIES = 10
 MAX_KERNELS = 5
 SEQUENCE_LENGTH = 512
-TOKENIZER_NAME = "LLM-ABBA"
-TOLERANCE = 0.1
-ALPHA = 0.1
+TOKENIZER_NAME = "LLMTime"
 EXPERIMENT_NAME = f"PTOK-{TOKENIZER_NAME}_LLM-{CHECKPOINT_NAME}_NTOK{MAX_NEW_TOKENS}_MKER{MAX_KERNELS}_SLEN{SEQUENCE_LENGTH}"
 
 timestamp = time.strftime('%Y%m%d-%H%M%S')
@@ -36,7 +30,7 @@ Path(OUTPUT_FOLDER).mkdir(exist_ok=True)
 dataset = get_dataset("kernelsynth", num_series=NUM_SERIES, max_kernels=MAX_KERNELS, sequence_lenght=SEQUENCE_LENGTH)
 ts_list = dataset.load()
 
-tokenizer = get_pretokenizer(TOKENIZER_NAME, tol=TOLERANCE, alpha=ALPHA)
+tokenizer = get_pretokenizer(TOKENIZER_NAME)
 model = get_model(CHECKPOINT_NAME, max_new_tokens=MAX_NEW_TOKENS, temperature=1.0, top_p=0.9)
 
 def main():
@@ -46,7 +40,6 @@ def main():
 
     for idx, ts in enumerate(ts_list):
         ts_data = ts["target"]
-
         data_string = tokenizer.encode(ts_data)
         model_response = model.generate_response(data_string)
 

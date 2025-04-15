@@ -81,8 +81,9 @@ class LLMABBAEncoder(BaseTimeSeriesPreTokenizer):
 
     def decode(self, encoded_string, reference_point=None):
         if self.encoder is not None:
-            symbol_list = list(encoded_string)  # Split into list of characters
-            return self.encoder.decode([symbol_list])
+            symbol_list = list(encoded_string)
+            responds = self.encoder.decode([symbol_list])
+            return responds[0]
         else:
             raise ValueError("Decoder requires a previously fitted encoder.")
 
