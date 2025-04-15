@@ -28,7 +28,7 @@ TOLERANCE = 0.1
 ALPHA = 0.1
 
 timestamp = time.strftime('%Y%m%d-%H%M%S')
-OUTPUT_FOLDER = f"{EXPERIMENT_NAME}_{timestamp}"
+OUTPUT_FOLDER = f"results/{EXPERIMENT_NAME}_{timestamp}"
 Path(OUTPUT_FOLDER).mkdir(exist_ok=True)
 
 # === Load components ===

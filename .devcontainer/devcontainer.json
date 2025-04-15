@@ -1,19 +1,25 @@
 {
-  "name": "ROCm Python Dev",
-  "dockerComposeFile": "../docker-compose.yml",
-  "service": "dev",
+  "name": "LLM Time Series Dev",
+  "dockerComposeFile": [
+    "../docker-compose.yml"
+  ],
+  "service": "dev-gpu",
   "workspaceFolder": "/workspace",
-  "settings": {
-    "python.defaultInterpreterPath": "python"
-  },
+  "runServices": ["dev-gpu"],
+  "postCreateCommand": "./.devcontainer/setup.sh",
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind"
+  ],
   "customizations": {
     "vscode": {
       "extensions": [
         "ms-python.python",
-        "ms-toolsai.jupyter"
+        "ms-toolsai.jupyter",
+        "ms-vscode.cpptools"
       ]
     }
   },
-  "postCreateCommand": "pip install -r requirements.txt || true",
-  "remoteUser": "root"
+  "remoteEnv": {
+    "PYTHONUNBUFFERED": "1"
+  }
 }
