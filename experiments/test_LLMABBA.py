@@ -8,10 +8,11 @@ from src.datasets import get_dataset
 from src.pretokenizer import get_pretokenizer
 from src.lmwrapper import get_model
 from experiment_utils import (
-    inverse_transform_safe,
     save_experiment_settings,
+    inverse_transform_safe,
     plot_series,
-    fix_output_ownership
+    fix_output_ownership,
+    split_data
 )
 
 np.set_printoptions(threshold=sys.maxsize)
@@ -22,7 +23,8 @@ MAX_NEW_TOKENS = 50
 OUTPUT_JSONL = "model_responses.jsonl"
 NUM_SERIES = 10
 MAX_KERNELS = 5
-SEQUENCE_LENGTH = 512
+SEQUENCE_LENGTH = 4096
+PROMPT_LENGTH_FACTOR = 0.8
 TOKENIZER_NAME = "LLM-ABBA"
 TOLERANCE = 0.1
 ALPHA = 0.1
@@ -46,14 +48,14 @@ def main():
 
     for idx, ts in enumerate(ts_list):
         ts_data = ts["target"]
-
-        data_string = tokenizer.encode(ts_data)
+        ts_data_split = split_data(ts_data, PROMPT_LENGTH_FACTOR)
+        data_string = tokenizer.encode(ts_data_split)
         model_response = model.generate_response(data_string)
 
-        reconstructed, rec_success = inverse_transform_safe(tokenizer, data_string)
-        predicted, pred_success = inverse_transform_safe(tokenizer, model_response)
+        reconstructed, rec_success = inverse_transform_safe(tokenizer, data_string, ts_data_split[0])
+        predicted, pred_success = inverse_transform_safe(tokenizer, model_response, ts_data_split[-1])
 
-        plot_path = plot_series(idx, ts_data, reconstructed, predicted, pred_success, OUTPUT_FOLDER)
+        plot_path = plot_series(idx, ts_data, reconstructed, predicted, pred_success, OUTPUT_FOLDER, prediction_offset = len(ts_data_split))
 
         result = {
             "id": idx,

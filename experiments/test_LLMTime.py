@@ -9,7 +9,8 @@ from experiment_utils import (
     save_experiment_settings,
     inverse_transform_safe,
     plot_series,
-    fix_output_ownership
+    fix_output_ownership,
+    split_data
 )
 
 # === Settings ===
@@ -19,6 +20,7 @@ OUTPUT_JSONL = "model_responses.jsonl"
 NUM_SERIES = 10
 MAX_KERNELS = 5
 SEQUENCE_LENGTH = 512
+PROMPT_LENGTH_FACTOR = 1.0
 TOKENIZER_NAME = "LLMTime"
 EXPERIMENT_NAME = f"PTOK-{TOKENIZER_NAME}_LLM-{CHECKPOINT_NAME}_NTOK{MAX_NEW_TOKENS}_MKER{MAX_KERNELS}_SLEN{SEQUENCE_LENGTH}"
 
@@ -40,13 +42,14 @@ def main():
 
     for idx, ts in enumerate(ts_list):
         ts_data = ts["target"]
-        data_string = tokenizer.encode(ts_data)
+        ts_data_split = split_data(ts_data, PROMPT_LENGTH_FACTOR)
+        data_string = tokenizer.encode(ts_data_split)
         model_response = model.generate_response(data_string)
 
-        reconstructed, rec_success = inverse_transform_safe(tokenizer, data_string)
-        predicted, pred_success = inverse_transform_safe(tokenizer, model_response)
+        reconstructed, rec_success = inverse_transform_safe(tokenizer, data_string, ts_data_split[0])
+        predicted, pred_success = inverse_transform_safe(tokenizer, model_response, ts_data_split[-1])
 
-        plot_path = plot_series(idx, ts_data, reconstructed, predicted, pred_success, OUTPUT_FOLDER)
+        plot_path = plot_series(idx, ts_data, reconstructed, predicted, pred_success, OUTPUT_FOLDER, prediction_offset = len(ts_data_split))
 
         result = {
             "id": idx,

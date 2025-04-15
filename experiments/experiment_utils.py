@@ -5,6 +5,19 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from pathlib import Path
 
+def split_data(input_list, percent):
+    """
+    Returns the first `percent` of the input list.
+    
+    Args:
+        input_list (list): The list to slice.
+        percent (float): The fraction of the list to return (between 0 and 1).
+        
+    Returns:
+        list: A sliced portion of the input list.
+    """
+    cutoff = int(len(input_list) * percent)
+    return input_list[:cutoff]
 
 def save_experiment_settings(output_folder, model, tokenizer, dataset):
     settings = {
@@ -42,12 +55,15 @@ def inverse_transform_safe(encoder, encoded_str, start_value=None):
         return None, False
 
 
-def plot_series(idx, original, reconstruction, prediction, success, output_folder):
+def plot_series(idx, original, reconstruction, prediction, success, output_folder, prediction_offset = None):
+    if (prediction_offset is None):
+        prediction_offset = len(original)
+
     plt.figure(figsize=(10, 4))
     plt.plot(original, label="Original")
     plt.plot(reconstruction, label="Reconstruction")
     if success and prediction is not None:
-        plt.plot(range(len(original), len(original) + len(prediction)), prediction, label="Prediction")
+        plt.plot(range(prediction_offset, prediction_offset + len(prediction)), prediction, label="Prediction")
     else:
         plt.title("Prediction failed (malformed output)")
     plt.legend()
