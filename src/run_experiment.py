@@ -4,7 +4,7 @@ import time
 import os
 from pathlib import Path
 from experiment_utils import *
-from datasets import get_dataset
+from available_datasets import get_dataset
 from pretokenizer import get_pretokenizer
 from lmwrapper import get_model
 
@@ -21,7 +21,7 @@ def run(config):
     experiment_name = generate_experiment_name(config)
     timestamp = time.strftime('%Y%m%d-%H%M%S')
     output_folder = f"results/{experiment_name}_{timestamp}"
-    Path(output_folder).mkdir(exist_ok=True)
+    Path(output_folder).mkdir(parents=True, exist_ok=True)
 
     dataset = get_dataset("kernelsynth", num_series=config["num_series"], max_kernels=config["max_kernels"], sequence_lenght=config["sequence_length"])
     ts_list = dataset.load()
@@ -49,10 +49,10 @@ def run(config):
             "inverse_success": pred_success,
             "plot_path": plot_path,
             "data": {
-                "original": ts_data,
-                "original_split": ts_data_split,
-                "reconstructed": reconstructed,
-                "predicted": predicted,
+                "original": safe_to_list(ts_data),
+                "original_split": safe_to_list(ts_data_split),
+                "reconstructed": safe_to_list(reconstructed),
+                "predicted": safe_to_list(predicted)
             },
             "model": {
                 "original_string": data_string,

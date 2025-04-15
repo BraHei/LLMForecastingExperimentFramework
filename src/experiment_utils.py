@@ -5,6 +5,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from pathlib import Path
 
+def safe_to_list(x):
+    return x.tolist() if hasattr(x, "tolist") else x
+
 def split_data(input_list, percent):
     """
     Returns the first `percent` of the input list.
