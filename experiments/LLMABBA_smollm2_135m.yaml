@@ -1,0 +1,13 @@
+experiment_name: "PTOK-LLM-ABBA_LLM-smollm2-135m_NTOK50_MKER5_SLEN4096"
+checkpoint_name: "smollm2-135m"
+tokenizer_name: "LLM-ABBA"
+max_new_tokens: 50
+num_series: 10
+max_kernels: 5
+sequence_length: 512
+prompt_length_factor: 0.8
+output_jsonl: "model_responses.jsonl"
+tokenizer_params:
+  tol: 0.1
+  alpha: 0.1
+

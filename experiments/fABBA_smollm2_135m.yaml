@@ -1,0 +1,13 @@
+checkpoint_name: "smollm2-135m"
+tokenizer_name: "fABBA"
+max_new_tokens: 50
+num_series: 10
+max_kernels: 5
+sequence_length: 512
+prompt_length_factor: 0.8
+output_jsonl: "model_responses.jsonl"
+tokenizer_params:
+  tol: 0.1
+  alpha: 0.1
+  sorting: "2-norm"
+  scl: 1
