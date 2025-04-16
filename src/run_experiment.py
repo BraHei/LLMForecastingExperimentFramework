@@ -65,7 +65,7 @@ def run(config):
             f.write(json.dumps(result) + "\n")
 
     fix_output_ownership(Path(output_folder))
-    print(f"Experiment {config['experiment_name']} complete.")
+    print(f"Experiment {experiment_name} complete.")
 
 if __name__ == "__main__":
     import argparse

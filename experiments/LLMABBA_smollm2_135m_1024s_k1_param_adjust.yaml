@@ -1,0 +1,11 @@
+checkpoint_name: "smollm2-135m"
+tokenizer_name: "LLM-ABBA"
+max_new_tokens: 100
+num_series: 10
+max_kernels: 1
+sequence_length: 1024
+prompt_length_factor: 0.8
+output_jsonl: "model_responses.jsonl"
+tokenizer_params:
+  tol: 0.01
+  alpha: 0.01
