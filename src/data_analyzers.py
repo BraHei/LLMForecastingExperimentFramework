@@ -13,18 +13,17 @@ class BaseDataAnalyzer(ABC):
 class MeanAbsoluteErrorAnalyzer(BaseDataAnalyzer):
     def __init__(self):
         super().__init__()
-        self.AnalyzerType = "MeanAbsoluteErrorAnalyzer"
+        self.AnalyzerType = "MeanAbsoluteError"
 
-    def Analyze(self,  true, predict):
+    def Analyze(self, true, predict):
         true = np.array(true)
         predict = np.array(predict)
         return np.mean(np.abs(true - predict))
 
-
 class MeanSquareErrorAnalyzer(BaseDataAnalyzer):
     def __init__(self):
         super().__init__()
-        self.AnalyzerType = "MeanSquareErrorAnalyzer"
+        self.AnalyzerType = "MeanSquareError"
 
     def Analyze(self,  true, predict):
         true = np.array(true)
@@ -34,9 +33,9 @@ class MeanSquareErrorAnalyzer(BaseDataAnalyzer):
 class RootMeanSquareErrorAnalyzer(BaseDataAnalyzer):
     def __init__(self):
         super().__init__()
-        self.AnalyzerType = "RootMeanSquareErrorAnalyzer"
+        self.AnalyzerType = "RootMeanSquareError"
 
-    def Analyze(self, time_series):
+    def Analyze(self, true, predict):
         true = np.array(true)
         predict = np.array(predict)
         return np.sqrt(np.mean((true - predict) ** 2))

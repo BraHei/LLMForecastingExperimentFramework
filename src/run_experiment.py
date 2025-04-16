@@ -7,6 +7,7 @@ from experiment_utils import *
 from available_datasets import get_dataset
 from pretokenizer import get_pretokenizer
 from lmwrapper import get_model
+from data_analyzers import get_data_analyzer
 
 def load_config(config_path):
     with open(config_path, 'r') as f:
@@ -29,7 +30,11 @@ def run(config):
     tokenizer = get_pretokenizer(config["tokenizer_name"], **config.get("tokenizer_params", {}))
     model = get_model(config["checkpoint_name"], max_new_tokens=config["max_new_tokens"], temperature=1.0, top_p=0.9)
 
-    save_experiment_settings(output_folder, model, tokenizer, dataset)
+    analyzers = []
+    for analyzer_name in config['data_analyzers']:
+        analyzers.append(get_data_analyzer(analyzer_name))
+
+    save_experiment_settings(output_folder, model, tokenizer, dataset, analyzers)
     results = []
     jsonl_path = os.path.join(output_folder, config["output_jsonl"])
 
@@ -41,6 +46,20 @@ def run(config):
 
         reconstructed, _ = inverse_transform_safe(tokenizer, data_string, ts_data_split[0])
         predicted, pred_success = inverse_transform_safe(tokenizer, model_response, ts_data_split[-1])
+
+        analysis_result = {}
+        if (pred_success):
+            true_values = ts_data[len(ts_data_split):len(ts_data_split) + len(predicted)]
+
+            # Adjust in case predicted is longer than the available true data
+            min_len = min(len(true_values), len(predicted))
+            true_values = true_values[:min_len]
+            predicted = predicted[:min_len]
+
+            for analyzer in analyzers:
+                analysis_result[analyzer.AnalyzerType] = analyzer.Analyze(true_values, predicted)
+        else:
+            analysis_result["Malformed output"] = 0
 
         plot_path = plot_series(idx, ts_data, reconstructed, predicted, pred_success, output_folder, prediction_offset = len(ts_data_split))
 
@@ -57,7 +76,8 @@ def run(config):
             "model": {
                 "original_string": data_string,
                 "model_response": model_response,
-            }
+            },
+            "analysis": analysis_result
         }
 
         results.append(result)

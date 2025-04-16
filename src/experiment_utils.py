@@ -22,7 +22,7 @@ def split_data(input_list, percent):
     cutoff = int(len(input_list) * percent)
     return input_list[:cutoff]
 
-def save_experiment_settings(output_folder, model, tokenizer, dataset):
+def save_experiment_settings(output_folder, model, tokenizer, dataset, analyzers):
     settings = {
         "model": {
             "checkpoint": model.checkpoint,
@@ -35,7 +35,8 @@ def save_experiment_settings(output_folder, model, tokenizer, dataset):
         "tokenizer": {
             "type": tokenizer.tokenizer_type,
         },
-        "dataset": dataset.metadata()
+        "dataset": dataset.metadata(),
+        "analyzers": [analyzer.AnalyzerType for analyzer in analyzers]
     }
 
     if hasattr(tokenizer, "encoder_params"):
@@ -58,17 +59,27 @@ def inverse_transform_safe(encoder, encoded_str, start_value=None):
         return None, False
 
 
-def plot_series(idx, original, reconstruction, prediction, success, output_folder, prediction_offset = None):
-    if (prediction_offset is None):
+def plot_series(idx, original, reconstruction, prediction, success, output_folder, prediction_offset=None):
+    if prediction_offset is None:
         prediction_offset = len(original)
 
     plt.figure(figsize=(10, 4))
     plt.plot(original, label="Original")
     plt.plot(reconstruction, label="Reconstruction")
+
     if success and prediction is not None:
-        plt.plot(range(prediction_offset, prediction_offset + len(prediction)), prediction, label="Prediction")
+        # Limit the prediction to not go beyond the length of the original
+        max_len = len(original) - prediction_offset
+        if max_len > 0:
+            trimmed_prediction = prediction[:max_len]
+            plt.plot(
+                range(prediction_offset, prediction_offset + len(trimmed_prediction)),
+                trimmed_prediction,
+                label="Prediction"
+            )
     else:
         plt.title("Prediction failed (malformed output)")
+
     plt.legend()
     plt.grid(True)
     path = f"{output_folder}/plot_{idx}.png"
