@@ -7,3 +7,4 @@ sequence_length: 512
 prompt_length_factor: 0.8
 output_jsonl: "model_responses.jsonl"
 tokenizer_params: {}
+data_analyzers: [MAE, MSE, RMSE]

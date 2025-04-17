@@ -11,3 +11,4 @@ tokenizer_params:
   alpha: 0.1
   sorting: "2-norm"
   scl: 1
+data_analyzers: [MAE, MSE, RMSE]
