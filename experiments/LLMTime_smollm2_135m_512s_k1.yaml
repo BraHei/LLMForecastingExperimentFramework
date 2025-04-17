@@ -1,9 +1,11 @@
 checkpoint_name: "smollm2-135m"
 tokenizer_name: "LLMTime"
 max_new_tokens: 500
-num_series: 10
-max_kernels: 1
-sequence_length: 512
+dataset_name: "kernelsynth"
+dataset_params:
+  num_series: 10
+  max_kernels: 1
+  sequence_lenght: 512
 prompt_length_factor: 0.8
 output_jsonl: "model_responses.jsonl"
 tokenizer_params: {}

@@ -24,7 +24,7 @@ def run(config):
     output_folder = f"results/{experiment_name}_{timestamp}"
     Path(output_folder).mkdir(parents=True, exist_ok=True)
 
-    dataset = get_dataset("kernelsynth", num_series=config["num_series"], max_kernels=config["max_kernels"], sequence_lenght=config["sequence_length"])
+    dataset = get_dataset(config["dataset_name"], **config.get("dataset_params", {}))
     ts_list = dataset.load()
 
     tokenizer = get_pretokenizer(config["tokenizer_name"], **config.get("tokenizer_params", {}))

@@ -3,11 +3,9 @@ from typing import Any, Dict, Optional, List
 from pathlib import Path
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
-
-import sys
-
+from darts.datasets import __all__ as darts_dataset_names
+from darts.datasets import *
 import pyarrow as pa
-import numpy as np
 
 from src.datasets_assets.kernelsynth import generate_time_series
 
@@ -37,6 +35,32 @@ class NixtlaDataset(BaseDataset):
             "name": self.dataset_name,
             "type": "forecasting",
             "source": "nixtla",
+        }
+
+class DartsDataset(BaseDataset):
+    def __init__(self, dataset_names: List[str]):
+        if isinstance(dataset_names, str):
+            dataset_names = [dataset_names]
+        self.dataset_names = dataset_names
+
+        # Validate against available datasets in Darts
+        invalid = [ds for ds in dataset_names if ds not in darts_dataset_names]
+        if invalid:
+            raise ValueError(f"Invalid Darts dataset(s): {invalid}. Available: {darts_dataset_names}")
+
+    def load(self):
+        series_list = []
+        for name in self.dataset_names:
+            dataset_cls = globals()[name]
+            dataset = dataset_cls()
+            series_list.append(dataset.load())
+        return series_list if len(series_list) > 1 else series_list[0]
+
+    def metadata(self):
+        return {
+            "name": ",".join(self.dataset_names),
+            "type": "forecasting",
+            "source": "darts",
         }
 
 class KernelSynthDataset(BaseDataset):
@@ -106,6 +130,7 @@ class KernelSynthDataset(BaseDataset):
 DATASET_REGISTRY = {
     "nixtla": NixtlaDataset,
     "kernelsynth": KernelSynthDataset,
+    "darts": DartsDataset,
 }
 
 def get_dataset(name: str, **kwargs) -> BaseDataset:
