@@ -3,19 +3,36 @@ import json
 import time
 import os
 from pathlib import Path
-from experiment_utils import *
-from available_datasets import get_dataset
-from pretokenizer import get_pretokenizer
-from lmwrapper import get_model
-from data_analyzers import get_data_analyzer
+from src.experiment_utils import *
+from src.available_datasets import get_dataset
+from src.pretokenizer import get_pretokenizer
+from src.lmwrapper import get_model
+from src.data_analyzers import get_data_analyzer
 
 def load_config(config_path):
     with open(config_path, 'r') as f:
         return yaml.safe_load(f)
         
 def generate_experiment_name(config):
-    name = f"PTOK-{config['tokenizer_name']}_LLM-{config['checkpoint_name']}_"
-    name += f"NTOK{config['max_new_tokens']}_MKER{config['max_kernels']}_SLEN{config['sequence_length']}"
+    base = f"PTOK-{config['tokenizer_name']}_LLM-{config['model_name']}_NTOK{config['model_parameters']['max_new_tokens']}"
+
+    dataset_name = config["dataset_name"]
+    dataset_params = config.get("dataset_params", {})
+
+    # KernelSynth-specific naming
+    if dataset_name == "kernelsynth":
+        name = f"{base}_DS-kernelsynth_MKER{dataset_params.get('max_kernels', '?')}_SLEN{dataset_params.get('sequence_lenght', '?')}"
+    # Darts-specific naming
+    elif dataset_name == "darts":
+        dataset_names = dataset_params.get("dataset_names", [])
+        if isinstance(dataset_names, str):
+            dataset_names = [dataset_names]
+        datasets_str = "-".join(dataset_names)
+        name = f"{base}_DS-darts"
+    # Nixtla or other datasets
+    else:
+        name = f"{base}_DS-{dataset_name}"
+
     return name
     
 def run(config):
@@ -28,7 +45,7 @@ def run(config):
     ts_list = dataset.load()
 
     tokenizer = get_pretokenizer(config["tokenizer_name"], **config.get("tokenizer_params", {}))
-    model = get_model(config["checkpoint_name"], max_new_tokens=config["max_new_tokens"], temperature=1.0, top_p=0.9)
+    model = get_model(config["model_name"], **config.get("model_parameters", {}))
 
     analyzers = []
     for analyzer_name in config['data_analyzers']:
@@ -39,7 +56,7 @@ def run(config):
     jsonl_path = os.path.join(output_folder, config["output_jsonl"])
 
     for idx, ts in enumerate(ts_list):
-        ts_data = ts["target"]
+        ts_data = ts["series"]
         ts_data_split = split_data(ts_data, config["prompt_length_factor"])
         data_string = tokenizer.encode(ts_data_split)
         model_response = model.generate_response(data_string)

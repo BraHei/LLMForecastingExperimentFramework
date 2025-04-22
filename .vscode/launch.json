@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run Experiment",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.run_experiment",
+            "args": [
+                "--config",
+                "experiments/LLMTime_llama3_135m_DARTS.yaml"
+            ],
+            "console": "integratedTerminal"
+        }
+    ]
+}

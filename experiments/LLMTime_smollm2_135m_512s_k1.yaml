@@ -1,6 +1,9 @@
-checkpoint_name: "smollm2-135m"
+model_name: "smollm2-135m"
+model_parameters:
+  max_new_tokens: 500
+  temperature: 1.0
+  top_p: 0.9
 tokenizer_name: "LLMTime"
-max_new_tokens: 500
 dataset_name: "kernelsynth"
 dataset_params:
   num_series: 10

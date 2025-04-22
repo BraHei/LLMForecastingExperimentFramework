@@ -3,9 +3,26 @@ from typing import Any, Dict, Optional, List
 from pathlib import Path
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
-from darts.datasets import __all__ as darts_dataset_names
-from darts.datasets import *
+from darts.datasets import (
+    AirPassengersDataset,
+    AusBeerDataset,
+    EnergyDataset,
+    HeartRateDataset,
+    IceCreamHeaterDataset,
+    MonthlyMilkDataset,
+    SunspotsDataset,
+    TemperatureDataset,
+    AustralianTourismDataset,
+    WeatherDataset,
+    WoolyDataset,
+    GasRateCO2Dataset,
+    ETTh1Dataset,
+    ETTh2Dataset,
+    ETTm1Dataset,
+    ETTm2Dataset,
+)
 import pyarrow as pa
+from typing import List
 
 from src.datasets_assets.kernelsynth import generate_time_series
 
@@ -37,24 +54,65 @@ class NixtlaDataset(BaseDataset):
             "source": "nixtla",
         }
 
+DARTS_DATASET_CLASSES = {
+    "AirPassengers": AirPassengersDataset,
+    "AusBeer": AusBeerDataset,
+    "Energy": EnergyDataset,
+    "HeartRate": HeartRateDataset,
+    "IceCreamHeater": IceCreamHeaterDataset,
+    "MonthlyMilk": MonthlyMilkDataset,
+    "Sunspots": SunspotsDataset,
+    "Temperature": TemperatureDataset,
+    "AustralianTourism": AustralianTourismDataset,
+    "Weather": WeatherDataset,
+    "Wooly": WoolyDataset,
+    "GasRateCO2": GasRateCO2Dataset,
+    "ETTh1": ETTh1Dataset,
+    "ETTh2": ETTh2Dataset,
+    "ETTm1": ETTm1Dataset,
+    "ETTm2": ETTm2Dataset,
+}
+
 class DartsDataset(BaseDataset):
     def __init__(self, dataset_names: List[str]):
         if isinstance(dataset_names, str):
             dataset_names = [dataset_names]
         self.dataset_names = dataset_names
 
-        # Validate against available datasets in Darts
-        invalid = [ds for ds in dataset_names if ds not in darts_dataset_names]
+        # Validate dataset names
+        invalid = [ds for ds in dataset_names if ds not in DARTS_DATASET_CLASSES]
         if invalid:
-            raise ValueError(f"Invalid Darts dataset(s): {invalid}. Available: {darts_dataset_names}")
+            raise ValueError(
+                f"Invalid Darts dataset(s): {invalid}. "
+                f"Available: {list(DARTS_DATASET_CLASSES.keys())}"
+            )
 
     def load(self):
-        series_list = []
+        from darts import TimeSeries
+
+        series_dicts = []
+
         for name in self.dataset_names:
-            dataset_cls = globals()[name]
+            dataset_cls = DARTS_DATASET_CLASSES[name]
             dataset = dataset_cls()
-            series_list.append(dataset.load())
-        return series_list if len(series_list) > 1 else series_list[0]
+            data = dataset.load()
+            if isinstance(data, TimeSeries):
+                data = [data]
+
+            for ts in data:
+                series_dicts.append({
+                    "series": ts.values().squeeze().tolist(),
+                    "known_covariates": None,
+                    "metadata": {
+                        "source": "darts",
+                        "dataset": name,
+                        "start": str(ts.start_time()) if ts.has_datetime_index else None,
+                        "freq": ts.freq_str if ts.has_datetime_index else None,
+                        "length": len(ts)
+                    }
+                })
+
+        return series_dicts
 
     def metadata(self):
         return {
@@ -91,27 +149,46 @@ class KernelSynthDataset(BaseDataset):
         # Try loading if file exists
         if self.file_path.exists():
             print(f"Loading pre-generated dataset from {self.file_path}")
-            return pa.ipc.open_file(self.file_path).read_all().to_pylist()
-
-        # Otherwise, generate the dataset
-        print("Generating synthetic dataset...")
-        results = Parallel(n_jobs=self.n_jobs, verbose=0)(
-            delayed(generate_time_series)(
-                max_kernels=self.max_kernels,
-                sequence_lenght=self.sequence_lenght
+            raw_data = pa.ipc.open_file(self.file_path).read_all().to_pylist()
+        else:
+            print("Generating synthetic dataset...")
+            raw_data = Parallel(n_jobs=self.n_jobs, verbose=0)(
+                delayed(generate_time_series)(
+                    max_kernels=self.max_kernels,
+                    sequence_lenght=self.sequence_lenght
+                )
+                for _ in tqdm(range(self.num_series), desc="KernelSynth", leave=False)
             )
-            for _ in tqdm(range(self.num_series), desc="KernelSynth", leave=False)
-        )
 
-        # Save to file if enabled
-        if self.save:
-            print(f"Saving dataset to {self.file_path}")
-            table = pa.Table.from_pylist(results)
-            with self.file_path.open("wb") as f:
-                with pa.ipc.new_file(f, table.schema) as writer:
-                    writer.write_table(table)
+            if self.save:
+                print(f"Saving dataset to {self.file_path}")
+                table = pa.Table.from_pylist(raw_data)
+                with self.file_path.open("wb") as f:
+                    with pa.ipc.new_file(f, table.schema) as writer:
+                        writer.write_table(table)
 
-        return results
+        # Standardize format
+        return [
+            {
+                "series": item["target"],
+                "known_covariates": None,
+                "metadata": {
+                    "source": "kernelsynth",
+                    "generator": {
+                        "amplitudes": item.get("amplitudes"),
+                        "frequencies": item.get("frequencies"),
+                        "phases": item.get("phases"),
+                    },
+                    "params": {
+                        "num_series": self.num_series,
+                        "max_kernels": self.max_kernels,
+                        "sequence_length": self.sequence_lenght,
+                    }
+                }
+            }
+            for item in raw_data
+        ]
+
 
     def metadata(self):
         return {
