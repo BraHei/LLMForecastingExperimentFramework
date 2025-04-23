@@ -1,10 +1,12 @@
 model_name: "smollm2-135m"
 model_parameters:
-  max_new_tokens: 32
-  temperature: 1.0
-dataset_name: "darts"
+  max_new_tokens: 250
+  temperature: 0.0
+dataset_name: "kernelsynth"
 dataset_params:
-  dataset_names: ["AirPassengers", "AusBeer", "HeartRate", "MonthlyMilk", "Sunspots", "Temperature", "Wooly"]
+  num_series: 10
+  max_kernels: 3
+  sequence_lenght: 1024
 tokenizer_name: "LLMTime"
 tokenizer_params: {}
 prompt_length_factor: 0.95

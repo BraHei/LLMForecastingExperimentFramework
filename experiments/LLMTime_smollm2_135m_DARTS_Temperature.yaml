@@ -1,12 +1,12 @@
 model_name: "smollm2-135m"
 model_parameters:
-  max_new_tokens: 32
+  max_new_tokens: 50
   temperature: 1.0
 dataset_name: "darts"
 dataset_params:
-  dataset_names: ["AirPassengers", "AusBeer", "HeartRate", "MonthlyMilk", "Sunspots", "Temperature", "Wooly"]
+  dataset_names: ["Temperature"]
 tokenizer_name: "LLMTime"
 tokenizer_params: {}
-prompt_length_factor: 0.95
+prompt_length_factor: 0.10
 output_jsonl: "model_responses.jsonl"
 data_analyzers: [MAE, MSE, RMSE]
