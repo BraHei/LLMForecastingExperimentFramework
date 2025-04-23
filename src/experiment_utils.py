@@ -81,7 +81,7 @@ def plot_series(idx, original, reconstruction, prediction, success, output_folde
         pred_end = prediction_offset + len(prediction)
         plt.plot(range(prediction_offset, pred_end), prediction, label="Prediction")
     else:
-        plt.title("Prediction failed (malformed output)")
+        idx = f"{idx}: Prediction failed (malformed output)"
 
     # Add labels and title
     plt.xlabel("Sample (-)")

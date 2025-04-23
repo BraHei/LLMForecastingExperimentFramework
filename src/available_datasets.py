@@ -121,7 +121,7 @@ class DartsDataset(BaseDataset):
                     "metadata": {
                         "source": "darts",
                         "dataset_name": name,
-                        "component": data.components[0] if data.components else None,
+                        "component": data.components[0],
                         "start": str(data.start_time()) if data.has_datetime_index else None,
                         "freq": data.freq_str if data.has_datetime_index else None,
                         "length": len(data)
