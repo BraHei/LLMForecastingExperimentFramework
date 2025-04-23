@@ -81,13 +81,15 @@ def run(config):
 
         plot_path = plot_series(ts_name, ts_data, reconstructed, predicted, pred_success, output_folder, prediction_offset = len(ts_data_split))
 
+        predicted_lenght = len(reconstructed) + len(predicted) if (pred_success and predicted is not None) else 0
+        ts_data_predict = ts_data[: predicted_lenght]
+
         result = {
             "id": ts_name,
             "inverse_success": pred_success,
             "plot_path": plot_path,
             "data": {
-                "original": safe_to_list(ts_data),
-                "original_split": safe_to_list(ts_data_split),
+                "original_split": safe_to_list(ts_data_predict),
                 "reconstructed": safe_to_list(reconstructed),
                 "predicted": safe_to_list(predicted)
             },

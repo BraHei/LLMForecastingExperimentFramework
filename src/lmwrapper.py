@@ -11,7 +11,8 @@ class LMWrapper:
                  use_auth_token: bool = False,
                  access_token: str = None,
                  truncate_if_exceeds: bool = True,
-                 do_sample: bool = False):
+                 do_sample: bool = False,
+                 repetition_penalty: float = 1.0):
         
         self.checkpoint = checkpoint
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
@@ -20,6 +21,7 @@ class LMWrapper:
         self.top_p = top_p
         self.truncate_if_exceeds = truncate_if_exceeds
         self.do_sample = do_sample
+        self.repetition_penalty = repetition_penalty
 
         self.tokenizer = AutoTokenizer.from_pretrained(
             checkpoint,
@@ -70,7 +72,8 @@ class LMWrapper:
                 temperature=self.temperature,
                 low_memory = True,
                 top_p=self.top_p,
-                do_sample=self.do_sample
+                do_sample=self.do_sample,
+                repetition_penalty = self.repetition_penalty
             )
 
         predictions = self.tokenizer.batch_decode(
