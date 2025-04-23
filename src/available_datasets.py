@@ -96,22 +96,37 @@ class DartsDataset(BaseDataset):
             dataset_cls = DARTS_DATASET_CLASSES[name]
             dataset = dataset_cls()
             data = dataset.load()
-            if isinstance(data, TimeSeries):
-                data = [data]
+            
+            # Split multivariant if available
+            if data.n_components and data.n_components > 1:
+                for i, component in enumerate(data.components):
+                    univariate_ts = data[component]
 
-            for ts in data:
+                    series_dicts.append({
+                        "series": univariate_ts.values().squeeze().tolist(),
+                        "known_covariates": None,
+                        "metadata": {
+                            "source": "darts",
+                            "dataset_name": f"{name}_{i}",
+                            "component": component,
+                            "start": str(univariate_ts.start_time()) if univariate_ts.has_datetime_index else None,
+                            "freq": univariate_ts.freq_str if univariate_ts.has_datetime_index else None,
+                            "length": len(univariate_ts)
+                        }
+                    })
+            else:
                 series_dicts.append({
-                    "series": ts.values().squeeze().tolist(),
+                    "series": data.values().squeeze().tolist(),
                     "known_covariates": None,
                     "metadata": {
                         "source": "darts",
-                        "dataset": name,
-                        "start": str(ts.start_time()) if ts.has_datetime_index else None,
-                        "freq": ts.freq_str if ts.has_datetime_index else None,
-                        "length": len(ts)
+                        "dataset_name": name,
+                        "component": data.components[0] if data.components else None,
+                        "start": str(data.start_time()) if data.has_datetime_index else None,
+                        "freq": data.freq_str if data.has_datetime_index else None,
+                        "length": len(data)
                     }
                 })
-
         return series_dicts
 
     def metadata(self):
@@ -174,6 +189,7 @@ class KernelSynthDataset(BaseDataset):
                 "known_covariates": None,
                 "metadata": {
                     "source": "kernelsynth",
+                    "dataset_name": idx,
                     "generator": {
                         "amplitudes": item.get("amplitudes"),
                         "frequencies": item.get("frequencies"),
@@ -186,7 +202,7 @@ class KernelSynthDataset(BaseDataset):
                     }
                 }
             }
-            for item in raw_data
+            for idx, item in enumerate(raw_data)
         ]
 
 

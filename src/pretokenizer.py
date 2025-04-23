@@ -87,7 +87,27 @@ class LLMABBAEncoder(BaseTimeSeriesPreTokenizer):
         else:
             raise ValueError("Decoder requires a previously fitted encoder.")
 
+# Can be improved later on for parallel processing
+class LLMABBAEncoderSpaced(BaseTimeSeriesPreTokenizer):
+    def __init__(self, **encoder_params):
+        super().__init__()
+        self.tokenizer_type = "LLM-ABBA"
+        self.encoder_params = encoder_params
 
+    def encode(self, time_series):
+        time_series = np.asarray(time_series)
+
+        self.encoder = LLMABBA(**self.encoder_params)
+        encoded_array = self.encoder.encode([time_series.tolist()])[0]
+        return ' '.join(encoded_array)
+
+    def decode(self, encoded_string, reference_point=None):
+        if self.encoder is not None:
+            symbol_list = list(encoded_string.replace(" ", ""))
+            responds = self.encoder.decode([symbol_list])
+            return responds[0]
+        else:
+            raise ValueError("Decoder requires a previously fitted encoder.")
 
 class LLMTimeEncoder(BaseTimeSeriesPreTokenizer):
     def __init__(self, settings=None):
@@ -105,6 +125,7 @@ class LLMTimeEncoder(BaseTimeSeriesPreTokenizer):
 PRETOKENIZER_REGISTRY = {
     "fABBA": FABBAEncoder,
     "LLM-ABBA": LLMABBAEncoder,
+    "LLM-ABBA_SPACED": LLMABBAEncoderSpaced,
     "LLMTime": LLMTimeEncoder,
 }
 

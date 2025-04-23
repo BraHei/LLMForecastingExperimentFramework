@@ -55,8 +55,9 @@ def run(config):
     results = []
     jsonl_path = os.path.join(output_folder, config["output_jsonl"])
 
-    for idx, ts in enumerate(ts_list):
+    for ts in ts_list:
         ts_data = ts["series"]
+        ts_name = ts["metadata"]["dataset_name"]
         ts_data_split = split_data(ts_data, config["prompt_length_factor"])
         data_string = tokenizer.encode(ts_data_split)
         model_response = model.generate_response(data_string)
@@ -78,10 +79,10 @@ def run(config):
         else:
             analysis_result["Malformed output"] = 0
 
-        plot_path = plot_series(idx, ts_data, reconstructed, predicted, pred_success, output_folder, prediction_offset = len(ts_data_split))
+        plot_path = plot_series(ts_name, ts_data, reconstructed, predicted, pred_success, output_folder, prediction_offset = len(ts_data_split))
 
         result = {
-            "id": idx,
+            "id": ts_name,
             "inverse_success": pred_success,
             "plot_path": plot_path,
             "data": {

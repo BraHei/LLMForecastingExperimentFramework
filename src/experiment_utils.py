@@ -30,7 +30,8 @@ def save_experiment_settings(output_folder, model, tokenizer, dataset, analyzers
             "temperature": model.temperature,
             "top_p": model.top_p,
             "context_window": model.context_window,
-            "device": model.device
+            "device": model.device,
+            "precision": model.precision
         },
         "tokenizer": {
             "type": tokenizer.tokenizer_type,

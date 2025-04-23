@@ -8,7 +8,7 @@
             "module": "src.run_experiment",
             "args": [
                 "--config",
-                "experiments/LLMTime_llama3_135m_DARTS.yaml"
+                "experiments/LLMABBA_smollm2_135m_DARTS_etth.yaml"
             ],
             "console": "integratedTerminal"
         }
