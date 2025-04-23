@@ -61,33 +61,41 @@ def inverse_transform_safe(encoder, encoded_str, start_value=None):
 
 
 def plot_series(idx, original, reconstruction, prediction, success, output_folder, prediction_offset=None):
+    plt.style.use('default')  # Use default matplotlib style
+
     if prediction_offset is None:
         prediction_offset = len(original)
 
+    # Determine the x-axis length
+    max_len = min(
+        len(original),
+        prediction_offset + len(prediction) if (success and prediction is not None) else len(reconstruction)
+    )
+
+    # Create figure and plot
     plt.figure(figsize=(10, 4))
-    plt.plot(original, label="Original")
-    plt.plot(reconstruction, label="Reconstruction")
+    plt.plot(range(len(original)), original, label="Original")
+    plt.plot(range(len(reconstruction)), reconstruction, label="Reconstruction")
 
     if success and prediction is not None:
-        # Limit the prediction to not go beyond the length of the original
-        max_len = len(original) - prediction_offset
-        if max_len > 0:
-            trimmed_prediction = prediction[:max_len]
-            plt.plot(
-                range(prediction_offset, prediction_offset + len(trimmed_prediction)),
-                trimmed_prediction,
-                label="Prediction"
-            )
+        pred_end = prediction_offset + len(prediction)
+        plt.plot(range(prediction_offset, pred_end), prediction, label="Prediction")
     else:
         plt.title("Prediction failed (malformed output)")
 
+    # Add labels and title
+    plt.xlabel("Sample (-)")
+    plt.ylabel("Amplitude (-)")
+    plt.title(str(idx))
     plt.legend()
     plt.grid(True)
+
+    # Save and close
     path = f"{output_folder}/plot_{idx}.png"
+    plt.xlim(0, max_len)
     plt.savefig(path)
     plt.close()
     return path
-
 
 def fix_output_ownership(folder: Path):
     try:

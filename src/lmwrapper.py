@@ -7,7 +7,7 @@ class LMWrapper:
                  device: str = None,
                  max_new_tokens: int = 250,
                  temperature: float = 1.0,
-                 top_p: float = 0.9,
+                 top_p: float = 1.0,
                  use_auth_token: bool = False,
                  access_token: str = None,
                  truncate_if_exceeds: bool = True,
