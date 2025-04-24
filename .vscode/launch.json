@@ -1,6 +1,7 @@
 {
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "Run Experiment",
             "type": "debugpy",
@@ -8,9 +9,10 @@
             "module": "src.run_experiment",
             "args": [
                 "--config",
-                "experiments/LLMABBA_smollm2_135m_DARTS_etth.yaml"
+                "experiments/distilgpt2/LLMABBA_distilgpt2_1024s_3k_params_improve.yaml"
             ],
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "justMyCode": false,
         }
     ]
 }
