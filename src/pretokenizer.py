@@ -134,9 +134,3 @@ PRETOKENIZER_REGISTRY = {
     "LLM-ABBA_SPACED": LLMABBAEncoderSpaced,
     "LLMTime": LLMTimeEncoder,
 }
-
-def get_pretokenizer(name: str, **kwargs) -> BaseTimeSeriesPreTokenizer:
-    if name not in PRETOKENIZER_REGISTRY:
-        raise ValueError(f"Unknown pretokenizer: {name}. Available: {list(PRETOKENIZER_REGISTRY.keys())}")
-    return PRETOKENIZER_REGISTRY[name](**kwargs)
-

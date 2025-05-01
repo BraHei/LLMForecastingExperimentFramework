@@ -45,8 +45,3 @@ DATA_ANALYZER_REGISTRY = {
     "MSE": MeanSquareErrorAnalyzer,
     "RMSE": RootMeanSquareErrorAnalyzer,
 }
-
-def get_data_analyzer(name: str, **kwargs) -> BaseDataAnalyzer:
-    if name not in DATA_ANALYZER_REGISTRY:
-        raise ValueError(f"Unknown data_analyzer: {name}. Available: {list(DATA_ANALYZER_REGISTRY.keys())}")
-    return DATA_ANALYZER_REGISTRY[name](**kwargs)

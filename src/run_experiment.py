@@ -1,136 +1,140 @@
-import yaml
+from __future__ import annotations
+
 import json
 import time
-import os
 from pathlib import Path
-from src.experiment_utils import *
-from src.available_datasets import get_dataset
-from src.pretokenizer import get_pretokenizer
-from src.lmwrapper import get_model
-from src.data_analyzers import get_data_analyzer
+from typing import Iterable, List
 
-def load_config(config_path):
-    with open(config_path, 'r') as f:
-        return yaml.safe_load(f)
-        
-def generate_experiment_name(config):
-    base = f"PTOK-{config['tokenizer_name']}_LLM-{config['model_name']}_NTOK{config['model_parameters']['max_new_tokens']}"
-
-    dataset_name = config["dataset_name"]
-    dataset_params = config.get("dataset_params", {})
-
-    # KernelSynth-specific naming
-    if dataset_name == "kernelsynth":
-        name = f"{base}_DS-kernelsynth_MKER{dataset_params.get('max_kernels', '?')}_SLEN{dataset_params.get('sequence_lenght', '?')}"
-    # Darts-specific naming
-    elif dataset_name == "darts":
-        dataset_names = dataset_params.get("dataset_names", [])
-        if isinstance(dataset_names, str):
-            dataset_names = [dataset_names]
-        datasets_str = "-".join(dataset_names)
-        name = f"{base}_DS-darts"
-    # Nixtla or other datasets
-    else:
-        name = f"{base}_DS-{dataset_name}"
-
-    return name
-    
-def run(config):
-    experiment_name = generate_experiment_name(config)
-    timestamp = time.strftime('%Y%m%d-%H%M%S')
-    output_folder = f"results/{experiment_name}_{timestamp}"
-    Path(output_folder).mkdir(parents=True, exist_ok=True)
-
-    dataset = get_dataset(config["dataset_name"], **config.get("dataset_params", {}))
-    ts_list = dataset.load()
-
-    tokenizer = get_pretokenizer(config["tokenizer_name"], **config.get("tokenizer_params", {}))
-    model = get_model(config["model_name"], **config.get("model_parameters", {}))
-
-    analyzers = []
-    for analyzer_name in config['data_analyzers']:
-        analyzers.append(get_data_analyzer(analyzer_name))
-
-    save_experiment_settings(output_folder, model, tokenizer, dataset, analyzers)
-    results = []
-    jsonl_path = os.path.join(output_folder, config["output_jsonl"])
-
-    for ts in ts_list:
-        ts_data = ts["series"]
-        ts_name = ts["metadata"]["dataset_name"]
-        ts_data_split = split_data(ts_data, config["prompt_length_factor"])
-        data_string = tokenizer.encode(ts_data_split)
-        model_response = model.generate_response(data_string)
-
-        reconstructed, _ = inverse_transform_safe(tokenizer, data_string, ts_data_split[0])
-        predicted, pred_success = inverse_transform_safe(tokenizer, model_response, ts_data_split[-1])
-
-        analysis_result_recon = {}
-
-        # Make a copy so we don't modify the original
-        reconstructed_padded = reconstructed.copy()
-        
-        if len(ts_data_split) > len(reconstructed_padded):
-            print("Reconstruction lost data, appending zeros to fill")
-            padding_length = len(ts_data_split) - len(reconstructed_padded)
-            reconstructed_padded += [0] * padding_length
-        elif len(ts_data_split) < len(reconstructed_padded):
-            print("Reconstruction has extra data, truncating")
-            reconstructed_padded = reconstructed_padded[:len(ts_data_split)]
-
-        for analyzer in analyzers:
-            analysis_result_recon[analyzer.AnalyzerType] = analyzer.Analyze(ts_data_split, reconstructed_padded)
+from src.config import ExperimentConfig, load_config
+from src.experiment_utils import (
+    fix_output_ownership,
+    plot_series,
+    safe_to_list,
+    build,
+    inverse_transform_safe
+)
+from src.available_datasets import DATASET_REGISTRY
+from src.pretokenizer import PRETOKENIZER_REGISTRY
+from src.lmwrapper import MODEL_REGISTRY
+from src.data_analyzers import DATA_ANALYZER_REGISTRY
 
 
-        analysis_result_pred = {}
-        if (pred_success):
-            true_values = ts_data[len(ts_data_split):len(ts_data_split) + len(predicted)]
+# ---------------------------------------------------------------------
+class SeriesProcessor:
+    """Turns one time‑series into (recon, pred, metrics)."""
 
-            # Adjust in case predicted is longer than the available true data
-            min_len = min(len(true_values), len(predicted))
-            true_values = true_values[:min_len]
+    def __init__(self, cfg: ExperimentConfig):
+        self.cfg = cfg
+        self.tokenizer = build(cfg.tokenizer_name, PRETOKENIZER_REGISTRY, **cfg.tokenizer_params)
+        self.model = build(cfg.model_name, MODEL_REGISTRY, **cfg.model_parameters)
+        self.analyzers = [build(name, DATA_ANALYZER_REGISTRY) for name in cfg.data_analyzers]
+
+    # --------------------------------------------------------------
+    def __call__(self, ts_name: str, ts_data: List[float]) -> dict:
+        ts_data_split = ts_data[:cfg.input_data_length]
+        # --- encode -------------------------------------------------
+        data_string = self.tokenizer.encode(ts_data_split)
+
+        # --- LLM interaction ---------------------------------------
+        start = time.perf_counter()
+        generated = self.model.generate_response(data_string)
+        latency = time.perf_counter() - start
+
+        # --- decode -------------------------------------------------
+        reconstructed, _ = inverse_transform_safe(self.tokenizer, data_string, ts_data_split[-1])
+        predicted, pred_success = inverse_transform_safe(self.tokenizer, generated, ts_data_split[-1])
+
+        # --- metrics ----------------------------------------------
+        analysis_result = {}
+        if pred_success:
+            true_segment = ts_data[len(ts_data_split) : len(ts_data_split) + len(predicted)]
+            min_len = min(len(true_segment), len(predicted))
+            true_segment = true_segment[:min_len]
             predicted = predicted[:min_len]
-
-            for analyzer in analyzers:
-                analysis_result_pred[analyzer.AnalyzerType] = analyzer.Analyze(true_values, predicted)
+            for a in self.analyzers:
+                analysis_result[a.AnalyzerType] = a.Analyze(true_segment, predicted)
         else:
-            analysis_result_pred["Malformed output"] = 0
+            analysis_result["Malformed output"] = 0.0
 
-        plot_path = plot_series(ts_name, ts_data, reconstructed, predicted, pred_success, output_folder, prediction_offset = len(ts_data_split))
-
-        predicted_lenght = len(reconstructed) + len(predicted) if (pred_success and predicted is not None) else 0
-        ts_data_predict = ts_data[: predicted_lenght]
-
-        result = {
+        return {
             "id": ts_name,
             "inverse_success": pred_success,
-            "plot_path": plot_path,
             "data": {
-                "original_split": safe_to_list(ts_data_predict),
+                "original_split": safe_to_list(ts_data_split),
                 "reconstructed": safe_to_list(reconstructed),
-                "predicted": safe_to_list(predicted)
+                "predicted": safe_to_list(predicted),
             },
             "model": {
                 "original_string": data_string,
-                "model_response": model_response,
+                "generated": generated,
+                "latency": latency,
             },
-            "analysis_pred": analysis_result_pred,
-            "analysis_result_recon": analysis_result_recon
+            "metrics": analysis_result,
         }
 
-        results.append(result)
-        with open(jsonl_path, "a") as f:
-            f.write(json.dumps(result) + "\n")
 
-    fix_output_ownership(Path(output_folder))
-    print(f"Experiment {experiment_name} complete.")
+# ---------------------------------------------------------------------
+class ResultRecorder:
+    """Handles IO concerns only."""
 
+    def __init__(self, out_dir: Path):
+        self.out_dir = out_dir
+        self.out_dir.mkdir(parents=True, exist_ok=True)
+        self.jsonl_path = self.out_dir / "results.jsonl"
+
+    def record_jsonl(self, results: Iterable[dict]) -> None:
+        with open(self.jsonl_path, "w") as f:
+            for r in results:
+                f.write(json.dumps(r) + "\n")
+        fix_output_ownership(self.out_dir)
+
+
+# ---------------------------------------------------------------------
+class ExperimentRunner:
+    def __init__(self, cfg: ExperimentConfig):
+        self.cfg = cfg
+        self.name = cfg.experiment_name or cfg.build_experiment_name()
+        self.out_dir = Path(cfg.output_dir) / self.name
+        self.processor = SeriesProcessor(cfg)
+        self.recorder = ResultRecorder(self.out_dir)
+
+    # --------------------------------------------------------------
+    def run(self) -> None:
+        # --- dataset ------------------------------------------------
+        dataset = build(self.cfg.dataset_name, DATASET_REGISTRY, **self.cfg.dataset_params)
+        series_iter = list(dataset.load())
+
+        results: List[dict] = []
+        for series in series_iter:
+            ts_name = series["metadata"]["dataset_name"]
+            ts_data = series["series"]
+            outcome = self.processor(ts_name, ts_data)
+
+            # side‑effect: plot ------------------------------------
+            ts_plot_path = plot_series(
+                ts_name,
+                ts_data,
+                outcome["data"]["reconstructed"],
+                outcome["data"]["predicted"],
+                outcome["inverse_success"],
+                str(self.out_dir),
+                prediction_offset=len(outcome["data"]["original_split"]),
+            )
+            outcome["plot_path"] = ts_plot_path
+            results.append(outcome)
+
+        # --- persist all -------------------------------------------
+        self.recorder.record_jsonl(results)
+        print(f"Experiment '{self.name}' finished. Results in {self.out_dir}")
+
+
+# ---------------------------------------------------------------------
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, required=True, help="Path to YAML config file")
+
+    parser = argparse.ArgumentParser(description="Run a time‑series LLM experiment")
+    parser.add_argument("--config", required=True, help="Path to YAML config file")
     args = parser.parse_args()
 
-    config = load_config(args.config)
-    run(config)
-
+    cfg = load_config(args.config)
+    ExperimentRunner(cfg).run()

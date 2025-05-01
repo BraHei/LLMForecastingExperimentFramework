@@ -255,16 +255,11 @@ class LMWrapper:
     #     return density
 
 MODEL_REGISTRY = {
-    "distilgpt2": "distilbert/distilgpt2",
-    "llama3-instruct": "meta-llama/Meta-Llama-3.1-8B-Instruct",
-    "llama3": "meta-llama/Meta-Llama-3.1-8B",
-    "smollm2-1.7b-instruct": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
-    "smollm2-1.7b": "HuggingFaceTB/SmolLM2-1.7B",
-    "smollm2-135m-instruct": "HuggingFaceTB/SmolLM2-135M-Instruct",
-    "smollm2-135m": "HuggingFaceTB/SmolLM2-135M",
+    "distilgpt2": lambda **kwargs: LMWrapper(checkpoint="distilbert/distilgpt2", **kwargs),
+    "llama3-instruct": lambda **kwargs: LMWrapper(checkpoint="meta-llama/Meta-Llama-3.1-8B-Instruct", **kwargs),
+    "llama3": lambda **kwargs: LMWrapper(checkpoint="meta-llama/Meta-Llama-3.1-8B", **kwargs),
+    "smollm2-1.7b-instruct": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM2-1.7B-Instruct", **kwargs),
+    "smollm2-1.7b": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM2-1.7B", **kwargs),
+    "smollm2-135m-instruct": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM2-135M-Instruct", **kwargs),
+    "smollm2-135m": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM2-135M", **kwargs),
 }
-
-def get_model(name: str, **kwargs) -> LMWrapper:
-    if name not in MODEL_REGISTRY:
-        raise ValueError(f"Unknown model name: {name}. Available: {list(MODEL_REGISTRY.keys())}")
-    return LMWrapper(checkpoint=MODEL_REGISTRY[name], **kwargs)

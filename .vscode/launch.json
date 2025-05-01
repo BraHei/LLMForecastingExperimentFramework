@@ -2,6 +2,7 @@
     "version": "0.2.0",
     "configurations": [
 
+
         {
             "name": "Run Experiment",
             "type": "debugpy",
@@ -9,7 +10,7 @@
             "module": "src.run_experiment",
             "args": [
                 "--config",
-                "experiments/distilgpt2/LLMABBA_distilgpt2_1024s_3k_params_improve.yaml"
+                "experiments/distilgpt2_token_len_synth/LLMABBA_distilgpt2_1024s_3k.yaml"
             ],
             "console": "integratedTerminal",
             "justMyCode": false,
