@@ -31,7 +31,7 @@ class ExperimentConfig:
     output_dir: str = "results"
     seed: Optional[int] = None
 
-    # catch‑all for forward compatibility
+    # catch-all for forward compatibility
     extra: Dict[str, Any] = field(default_factory=dict, repr=False)
 
     
@@ -62,7 +62,7 @@ class ExperimentConfig:
             self.output_dir = str(Path("results") / self.experiment_name)
 
     def _post_init_validation(self, source: str | Path) -> None:
-        """Centralised sanity‑checks so they’re not scattered across the code base."""
+        """Centralised sanity-checks so they’re not scattered across the code base."""
         
         if self.model_parameters.get("max_new_tokens", 0) <= 0:
             raise ValueError(
@@ -79,7 +79,7 @@ class ExperimentConfig:
                 )
 
     def build_experiment_name(self) -> str:
-        """Deterministic but human‑readable identifier that encodes the core setup."""
+        """Deterministic but human-readable identifier that encodes the core setup."""
         base = (
             f"PTOK-{self.tokenizer_name}_"
             f"LLM-{self.model_name}_"
@@ -90,7 +90,7 @@ class ExperimentConfig:
 
         if self.dataset_name == "kernelsynth":
             return (
-                f"{base}_DS‑kernelsynth_"
+                f"{base}_DS-kernelsynth_"
                 f"NSER{self.dataset_params.get('num_series', '?')}"
                 f"MKER{self.dataset_params.get('max_kernels', '?')}_"
                 f"SLEN{self.dataset_params.get('sequence_lenght', '?')}"
@@ -98,7 +98,7 @@ class ExperimentConfig:
             )
         if self.dataset_name == "darts":
             datasets = ",".join(self.dataset_params.get("dataset_names", []))
-            return f"{base}_DS‑darts_{datasets}-{timestamp}"
+            return f"{base}_DS-darts_{datasets}-{timestamp}"
 
 
         return f"{base}_DS-{self.dataset_name}-{timestamp}"
