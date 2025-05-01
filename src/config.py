@@ -4,7 +4,7 @@ import yaml
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-
+import time
 
 @dataclass(slots=True)
 class ExperimentConfig:
@@ -27,14 +27,14 @@ class ExperimentConfig:
 
     # --- misc -----------------------------------------------------------
     data_analyzers: List[str] = field(default_factory=lambda: ["basic"])
-    experiment_name: Optional[str] = None  # can be auto‑generated
+    experiment_name: Optional[str] = None
     output_dir: str = "results"
     seed: Optional[int] = None
 
     # catch‑all for forward compatibility
     extra: Dict[str, Any] = field(default_factory=dict, repr=False)
 
-    # -------------------------------------------------------------------
+    
     @classmethod
     def from_yaml(cls, path: str | Path) -> "ExperimentConfig":
         """Load *and* validate a YAML file into a config object."""
@@ -51,8 +51,16 @@ class ExperimentConfig:
         cfg.extra = extra
         cfg._post_init_validation(path)
         return cfg
+    
 
-    # -------------------------------------------------------------------
+    def __post_init__(self):
+
+        if self.experiment_name == None:
+            self.experiment_name = self.build_experiment_name()
+
+        if self.output_dir == "results":
+            self.output_dir = str(Path("results") / self.experiment_name)
+
     def _post_init_validation(self, source: str | Path) -> None:
         """Centralised sanity‑checks so they’re not scattered across the code base."""
         
@@ -70,7 +78,6 @@ class ExperimentConfig:
                     f"{source}: kernelsynth requires 'dataset_params.num_series'"
                 )
 
-    # -------------------------------------------------------------------
     def build_experiment_name(self) -> str:
         """Deterministic but human‑readable identifier that encodes the core setup."""
         base = (
@@ -79,19 +86,37 @@ class ExperimentConfig:
             f"NTOK{self.model_parameters.get('max_new_tokens', '?')}"
         )
 
+        timestamp = time.strftime('%Y%m%d-%H%M%S')
+
         if self.dataset_name == "kernelsynth":
             return (
                 f"{base}_DS‑kernelsynth_"
                 f"NSER{self.dataset_params.get('num_series', '?')}"
                 f"MKER{self.dataset_params.get('max_kernels', '?')}_"
                 f"SLEN{self.dataset_params.get('sequence_lenght', '?')}"
+                f"-{timestamp}"
             )
         if self.dataset_name == "darts":
             datasets = ",".join(self.dataset_params.get("dataset_names", []))
-            return f"{base}_DS‑darts_{datasets}"
+            return f"{base}_DS‑darts_{datasets}-{timestamp}"
 
-        return f"{base}_DS-{self.dataset_name}"
 
+        return f"{base}_DS-{self.dataset_name}-{timestamp}"
+
+    def save(self, filename: str = "experiment_config.yaml") -> None:
+        """Save the current configuration (including extra fields) to a YAML file."""
+        output_path = Path(self.output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+        save_path = output_path / filename
+
+        # Combine known fields and extra fields
+        full_config = {
+            **{f.name: getattr(self, f.name) for f in self.__dataclass_fields__.values() if f.name != "extra"},
+            **self.extra,
+        }
+
+        with open(save_path, "w") as f:
+            yaml.safe_dump(full_config, f, sort_keys=False)
 
 # Helper that older code can import instead of touching YAML directly
 load_config = ExperimentConfig.from_yaml

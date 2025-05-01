@@ -93,8 +93,8 @@ class ResultRecorder:
 class ExperimentRunner:
     def __init__(self, cfg: ExperimentConfig):
         self.cfg = cfg
-        self.name = cfg.experiment_name or cfg.build_experiment_name()
-        self.out_dir = Path(cfg.output_dir) / self.name
+        self.name = cfg.experiment_name
+        self.out_dir = Path(cfg.output_dir)
         self.processor = SeriesProcessor(cfg)
         self.recorder = ResultRecorder(self.out_dir)
 
@@ -110,7 +110,7 @@ class ExperimentRunner:
             ts_data = series["series"]
             outcome = self.processor(ts_name, ts_data)
 
-            # side‑effect: plot ------------------------------------
+            # plot ------------------------------------
             ts_plot_path = plot_series(
                 ts_name,
                 ts_data,
@@ -121,10 +121,11 @@ class ExperimentRunner:
                 prediction_offset=len(outcome["data"]["original_split"]),
             )
             outcome["plot_path"] = ts_plot_path
-            results.append(outcome)
+            self.recorder.record_jsonl(outcome)
+            # results.append(outcome)
 
         # --- persist all -------------------------------------------
-        self.recorder.record_jsonl(results)
+
         print(f"Experiment '{self.name}' finished. Results in {self.out_dir}")
 
 
@@ -137,4 +138,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     cfg = load_config(args.config)
+    cfg.save()
     ExperimentRunner(cfg).run()
