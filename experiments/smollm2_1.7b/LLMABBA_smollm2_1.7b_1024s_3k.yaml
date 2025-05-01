@@ -11,6 +11,6 @@ tokenizer_name: "LLM-ABBA"
 tokenizer_params:
   tol: 0.1
   alpha: 0.1
-prompt_length_factor: 0.95
+input_data_length: 800
 output_jsonl: "model_responses.jsonl"
 data_analyzers: [MAE, MSE, RMSE]

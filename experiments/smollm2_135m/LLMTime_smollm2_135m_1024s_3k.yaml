@@ -9,6 +9,6 @@ dataset_params:
   sequence_lenght: 1024
 tokenizer_name: "LLMTime"
 tokenizer_params: {}
-prompt_length_factor: 0.95
+input_data_length: 800
 output_jsonl: "model_responses.jsonl"
 data_analyzers: [MAE, MSE, RMSE]

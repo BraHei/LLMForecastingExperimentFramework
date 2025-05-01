@@ -7,6 +7,6 @@ dataset_params:
   dataset_names: ["Temperature"]
 tokenizer_name: "LLMTime"
 tokenizer_params: {}
-prompt_length_factor: 0.10
+input_data_length: 800
 output_jsonl: "model_responses.jsonl"
 data_analyzers: [MAE, MSE, RMSE]
