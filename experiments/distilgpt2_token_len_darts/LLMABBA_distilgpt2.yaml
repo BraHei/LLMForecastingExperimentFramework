@@ -1,0 +1,19 @@
+model_name: "distilgpt2"
+model_parameters:
+  max_new_tokens: 50
+  temperature: 0.0
+  repetition_penalty: 1.0
+dataset_name: "darts"
+dataset_params:
+  dataset_names: ["ETTh1", Temperature]
+tokenizer_name: "LLM-ABBA"
+tokenizer_params:
+  tol: 0.1
+  alpha: 0.1
+  init: 'kmeans'
+  k: 99999
+  scl: 3.0
+  # max_len: 1
+prompt_length_factor: 0.95
+output_jsonl: "model_responses.jsonl"
+data_analyzers: [MAE, MSE, RMSE]

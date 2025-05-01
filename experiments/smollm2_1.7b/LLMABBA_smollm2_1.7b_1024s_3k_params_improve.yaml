@@ -1,0 +1,20 @@
+model_name: "smollm2-1.7b"
+model_parameters:
+  max_new_tokens: 50
+  temperature: 0.0
+dataset_name: "kernelsynth"
+dataset_params:
+  num_series: 10
+  max_kernels: 3
+  sequence_lenght: 1024
+tokenizer_name: "LLM-ABBA"
+tokenizer_params:
+  tol: 0.1
+  alpha: 0.1
+  init: 'kmeans'
+  k: 26
+  scl: 0.0
+  max_len: 1
+prompt_length_factor: 0.95
+output_jsonl: "model_responses.jsonl"
+data_analyzers: [MAE, MSE, RMSE]
