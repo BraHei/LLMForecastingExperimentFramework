@@ -99,11 +99,11 @@ class LLMABBAEncoderSpaced(BaseTimeSeriesPreTokenizer):
 
         self.encoder = LLMABBA(**self.encoder_params)
         encoded_array = self.encoder.encode([time_series.tolist()])[0]
-        return ' '.join(encoded_array)
+        return '-'.join(encoded_array)
 
     def decode(self, encoded_string, reference_point=None):
         if self.encoder is not None:
-            symbol_list = list(encoded_string.replace(" ", ""))
+            symbol_list = list(encoded_string.replace("-", ""))
             responds = self.encoder.decode([symbol_list])
             return responds[0]
         else:
@@ -113,7 +113,13 @@ class LLMTimeEncoder(BaseTimeSeriesPreTokenizer):
     def __init__(self, settings=None):
         super().__init__()
         self.tokenizer_type = "LLMTime"
-        self.settings = settings if settings is not None else SerializerSettings()
+        self.settings = None
+        if settings is not None:
+            self.settings = settings
+        else: 
+            self.settings = SerializerSettings()
+            self.settings.bit_sep = ''
+            self.settings.time_sep = ','
 
     def encode(self, time_series):
         return serialize_arr(np.array(time_series), self.settings)

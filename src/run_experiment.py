@@ -65,7 +65,24 @@ def run(config):
         reconstructed, _ = inverse_transform_safe(tokenizer, data_string, ts_data_split[0])
         predicted, pred_success = inverse_transform_safe(tokenizer, model_response, ts_data_split[-1])
 
-        analysis_result = {}
+        analysis_result_recon = {}
+
+        # Make a copy so we don't modify the original
+        reconstructed_padded = reconstructed.copy()
+        
+        if len(ts_data_split) > len(reconstructed_padded):
+            print("Reconstruction lost data, appending zeros to fill")
+            padding_length = len(ts_data_split) - len(reconstructed_padded)
+            reconstructed_padded += [0] * padding_length
+        elif len(ts_data_split) < len(reconstructed_padded):
+            print("Reconstruction has extra data, truncating")
+            reconstructed_padded = reconstructed_padded[:len(ts_data_split)]
+
+        for analyzer in analyzers:
+            analysis_result_recon[analyzer.AnalyzerType] = analyzer.Analyze(ts_data_split, reconstructed_padded)
+
+
+        analysis_result_pred = {}
         if (pred_success):
             true_values = ts_data[len(ts_data_split):len(ts_data_split) + len(predicted)]
 
@@ -75,9 +92,9 @@ def run(config):
             predicted = predicted[:min_len]
 
             for analyzer in analyzers:
-                analysis_result[analyzer.AnalyzerType] = analyzer.Analyze(true_values, predicted)
+                analysis_result_pred[analyzer.AnalyzerType] = analyzer.Analyze(true_values, predicted)
         else:
-            analysis_result["Malformed output"] = 0
+            analysis_result_pred["Malformed output"] = 0
 
         plot_path = plot_series(ts_name, ts_data, reconstructed, predicted, pred_success, output_folder, prediction_offset = len(ts_data_split))
 
@@ -97,7 +114,8 @@ def run(config):
                 "original_string": data_string,
                 "model_response": model_response,
             },
-            "analysis": analysis_result
+            "analysis_pred": analysis_result_pred,
+            "analysis_result_recon": analysis_result_recon
         }
 
         results.append(result)
