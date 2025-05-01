@@ -13,16 +13,16 @@ __all__ = [
 ]
 
 def _softmax(logits: torch.Tensor) -> torch.Tensor:
-    """ Numerically‑stable softmax """
+    """ Numerically-stable softmax """
     return torch.log_softmax(logits, dim=-1).exp()
 
 
 def _single_token_ids(tokenizer, chars: str) -> Dict[str, int]:
     """Return mapping for *single* character tokens (digits, dot, comma).
 
-    We assume a **character‑level tokenizer** (as used in the paper). If the tokenizer
-    merges digits (e.g. "23" –> a single token) the discrete‑to‑continuous method doesn’t
-    apply directly and the caller should fall back to sampling‑based uncertainty. An
+    We assume a **character-level tokenizer** (as used in the paper). If the tokenizer
+    merges digits (e.g. "23" –> a single token) the discrete-to-continuous method doesn’t
+    apply directly and the caller should fall back to sampling-based uncertainty. An
     exception is raised so the experiment pipeline can catch & handle it.
     """
     mapping = {}
@@ -31,7 +31,7 @@ def _single_token_ids(tokenizer, chars: str) -> Dict[str, int]:
         if len(token_ids) != 1:
             raise ValueError(
                 f"Tokenizer does not treat '{c}' as a single token. "
-                "Use a character‑level tokenizer or adapt mapping logic."
+                "Use a character-level tokenizer or adapt mapping logic."
             )
         mapping[c] = token_ids[0]
     return mapping
@@ -153,14 +153,14 @@ class LMWrapper:
     #     precision: int = 1,
     #     delimiter: str = ",",
     #     ) -> List[Tuple[Tuple[float, float], float]]:
-    #     """Compute piece‑wise uniform density over R for a **single‑step forecast**.
+    #     """Compute piece-wise uniform density over R for a **single-step forecast**.
 
     #     *precision* is number of decimal places – following the paper we assume
-    #     fixed‑width bins of 10^{-precision}.
+    #     fixed-width bins of 10^{-precision}.
 
     #     Returns a list of tuples: [ ((low, high), probability), ... ]
     #     """
-    #     # Sanity: ensure delimiter & digits are single‑token
+    #     # Sanity: ensure delimiter & digits are single-token
     #     _single_token_ids(self.tokenizer, delimiter)
     #     digits = "0123456789"
     #     digit_ids = _single_token_ids(self.tokenizer, digits)

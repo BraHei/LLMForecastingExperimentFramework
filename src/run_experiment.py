@@ -21,7 +21,7 @@ from src.data_analyzers import DATA_ANALYZER_REGISTRY
 
 # ---------------------------------------------------------------------
 class SeriesProcessor:
-    """Turns one time‑series into (recon, pred, metrics)."""
+    """Turns one time-series into (recon, pred, metrics)."""
 
     def __init__(self, cfg: ExperimentConfig):
         self.cfg = cfg
@@ -133,7 +133,7 @@ class ExperimentRunner:
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Run a time‑series LLM experiment")
+    parser = argparse.ArgumentParser(description="Run a time-series LLM experiment")
     parser.add_argument("--config", required=True, help="Path to YAML config file")
     args = parser.parse_args()
 
