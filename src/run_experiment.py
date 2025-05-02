@@ -14,7 +14,7 @@ from src.experiment_utils import (
     inverse_transform_safe
 )
 from src.available_datasets import DATASET_REGISTRY
-from src.pretokenizer import PRETOKENIZER_REGISTRY
+from src.preprocessor import PRETOKENIZER_REGISTRY
 from src.lmwrapper import MODEL_REGISTRY
 from src.data_analyzers import DATA_ANALYZER_REGISTRY
 
