@@ -48,9 +48,9 @@ def save_experiment_settings(output_folder, model, tokenizer, dataset, analyzers
         json.dump(settings, f, indent=4)
 
 
-def inverse_transform_safe(encoder, encoded_str, start_value=None):
+def inverse_transform_safe(encoder, encoded_str):
     try:
-        return encoder.decode(encoded_str, reference_point=start_value), True
+        return encoder.decode(encoded_str), True
     except Exception as e:
         print(e)
         return None, False

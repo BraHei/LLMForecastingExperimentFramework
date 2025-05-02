@@ -108,12 +108,13 @@ class LLMTimePreprocessor(BaseTimeSeriesPreprocessor):
         self.scalar_min_ = None
 
     def calculate_scaling_parameters(self, time_series):
+        time_series = np.array(time_series)
         time_series = time_series[~np.isnan(time_series)]
         if self.scalar_basic:
             self.scalar_q = np.maximum(np.quantile(np.abs(time_series), self.scalar_alpha),.01)
         else:
-            self.scalar_min_ = np.min(time_series) - self.beta*(np.max(time_series)-np.min(time_series))
-            self.scalar_q = np.quantile(time_series-self.scalar_min_, self.alpha)
+            self.scalar_min_ = np.min(time_series) - self.scalar_beta*(np.max(time_series)-np.min(time_series))
+            self.scalar_q = np.quantile(time_series-self.scalar_min_, self.scalar_alpha)
             if self.scalar_q == 0:
                 self.scalar_q = 1
 

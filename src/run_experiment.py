@@ -41,8 +41,8 @@ class SeriesProcessor:
         latency = time.perf_counter() - start
 
         # --- decode -------------------------------------------------
-        reconstructed, _ = inverse_transform_safe(self.tokenizer, data_string, ts_data_split[-1])
-        predicted, pred_success = inverse_transform_safe(self.tokenizer, generated, ts_data_split[-1])
+        reconstructed, _ = inverse_transform_safe(self.tokenizer, data_string)
+        predicted, pred_success = inverse_transform_safe(self.tokenizer, generated)
 
         # --- metrics ----------------------------------------------
         analysis_result = {}
