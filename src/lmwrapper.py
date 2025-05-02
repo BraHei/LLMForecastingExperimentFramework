@@ -224,7 +224,6 @@ class LMWrapper:
     #         density.append(((low, high), p / bin_width))  # uniform density in bin
     #     return density
     
-
     # def symbol_density(
     #     self,
     #     prompt: str,

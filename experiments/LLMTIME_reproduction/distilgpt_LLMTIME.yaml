@@ -1,4 +1,4 @@
-model_name: "llama3"
+model_name: "distilgpt2"
 model_parameters:
   max_new_tokens: 50
   temperature: 1.0

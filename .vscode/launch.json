@@ -10,7 +10,7 @@
             "module": "src.run_experiment",
             "args": [
                 "--config",
-                "experiments/distilgpt2_token_len_synth/LLMABBA_distilgpt2_1024s_3k.yaml"
+                "experiments/LLMTIME_reproduction/LLama3_LLMTIME.yaml"
             ],
             "console": "integratedTerminal",
             "justMyCode": false,
