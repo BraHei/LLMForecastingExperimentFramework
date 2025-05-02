@@ -10,7 +10,7 @@
             "module": "src.run_experiment",
             "args": [
                 "--config",
-                "experiments/LLMTIME_reproduction/LLama3_LLMTIME.yaml"
+                "experiments/LLMTIME_reproduction/distilgpt_LLMTIME.yaml"
             ],
             "console": "integratedTerminal",
             "justMyCode": false,

@@ -97,7 +97,7 @@ class ExperimentConfig:
                 f"-{timestamp}"
             )
         if self.dataset_name == "darts":
-            datasets = ",".join(self.dataset_params.get("dataset_names", []))
+            datasets = ",".join(name[:3] for name in self.dataset_params.get("dataset_names", []))
             return f"{base}_DS-darts_{datasets}-{timestamp}"
 
 

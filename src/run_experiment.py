@@ -83,11 +83,9 @@ class ResultRecorder:
         self.jsonl_path = self.out_dir / "results.jsonl"
 
     def record_jsonl(self, results: Iterable[dict]) -> None:
-        with open(self.jsonl_path, "w") as f:
-            for r in results:
-                f.write(json.dumps(r) + "\n")
+        with open(self.jsonl_path, "a") as f:
+            f.write(json.dumps(results) + "\n")
         fix_output_ownership(self.out_dir)
-
 
 # ---------------------------------------------------------------------
 class ExperimentRunner:
@@ -122,7 +120,6 @@ class ExperimentRunner:
             )
             outcome["plot_path"] = ts_plot_path
             self.recorder.record_jsonl(outcome)
-            # results.append(outcome)
 
         # --- persist all -------------------------------------------
 
