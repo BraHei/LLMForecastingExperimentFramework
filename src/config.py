@@ -18,12 +18,14 @@ class ExperimentConfig:
     tokenizer_name: str
     model_name: str
     dataset_name: str
-    input_data_length: int
+
 
     # --- optional / nested dicts ---------------------------------------
     tokenizer_params: Dict[str, Any] = field(default_factory=dict)
     model_parameters: Dict[str, Any] = field(default_factory=dict)
     dataset_params: Dict[str, Any] = field(default_factory=dict)
+    input_data_length: Optional[int] = None
+    input_data_factor: Optional[float] = None
 
     # --- misc -----------------------------------------------------------
     data_analyzers: List[str] = field(default_factory=lambda: ["basic"])
@@ -54,6 +56,8 @@ class ExperimentConfig:
     
 
     def __post_init__(self):
+        if (self.input_data_length is None) == (self.input_data_factor is None):
+            raise ValueError("Exactly one of 'input_data_length' or 'input_data_factor' must be set.")
 
         if self.experiment_name == None:
             self.experiment_name = self.build_experiment_name()

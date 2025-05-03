@@ -66,8 +66,9 @@ class LMWrapper:
         self.model = AutoModelForCausalLM.from_pretrained(
             checkpoint, 
             torch_dtype="auto",
-            use_auth_token=access_token if use_auth_token else None
-        ).to(self.device)
+            use_auth_token=access_token if use_auth_token else None,
+            device_map="auto",
+        )
 
         self.model.eval()
 
@@ -98,6 +99,8 @@ class LMWrapper:
 
         attention_mask = torch.ones_like(input_ids)
 
+        torch.cuda.empty_cache()
+        
         outputs = self.model.generate(
             input_ids,
             attention_mask=attention_mask,

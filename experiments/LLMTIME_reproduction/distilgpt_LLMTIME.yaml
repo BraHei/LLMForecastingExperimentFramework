@@ -6,11 +6,11 @@ model_parameters:
   do_sample: true
 dataset_name: "darts"
 dataset_params:
-  dataset_names: ["AirPassengers", "MonthlyMilk", "HeartRate", "GasRateCO2", "Wooly"]
+  dataset_names: ["AirPassengers", "MonthlyMilk", "HeartRate", "GasRateCO2", "Wooly", "Sunspots"]
 tokenizer_name: "LLMTime"
 tokenizer_params:
   alpha: 0.99
   beta: 0.3
-input_data_length: 128
+input_data_factor: 0.8
 output_jsonl: "model_responses.jsonl"
 data_analyzers: [MAE, MSE, RMSE]

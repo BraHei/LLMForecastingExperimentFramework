@@ -18,6 +18,20 @@ def build(name: str, registry: dict[str, type[T]], **kwargs) -> T:
 def safe_to_list(x):
     return x.tolist() if hasattr(x, "tolist") else x
 
+def split_data(input_list, percent):
+    """
+    Returns the first `percent` of the input list.
+    Args:
+        input_list (list): The list to slice.
+        percent (float): The fraction of the list to return (between 0 and 1).
+    Returns:
+        list: A sliced portion of the input list.
+    """
+
+    cutoff = int(len(input_list) * percent)
+ 
+    return input_list[:cutoff]
+
 def save_experiment_settings(output_folder, model, tokenizer, dataset, analyzers):
     settings = {
         "model": {

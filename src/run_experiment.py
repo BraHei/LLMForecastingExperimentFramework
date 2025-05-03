@@ -11,7 +11,8 @@ from src.experiment_utils import (
     plot_series,
     safe_to_list,
     build,
-    inverse_transform_safe
+    inverse_transform_safe,
+    split_data
 )
 from src.available_datasets import DATASET_REGISTRY
 from src.preprocessor import PRETOKENIZER_REGISTRY
@@ -31,7 +32,12 @@ class SeriesProcessor:
 
     # --------------------------------------------------------------
     def __call__(self, ts_name: str, ts_data: List[float]) -> dict:
-        ts_data_split = ts_data[:cfg.input_data_length]
+        # --- split data----------------------------------------------
+        if (cfg.input_data_length is not None):
+            ts_data_split = ts_data[:cfg.input_data_length]
+        else:
+            ts_data_split = split_data(ts_data, cfg.input_data_factor)
+
         # --- encode -------------------------------------------------
         data_string = self.tokenizer.encode(ts_data_split)
 
@@ -102,7 +108,6 @@ class ExperimentRunner:
         dataset = build(self.cfg.dataset_name, DATASET_REGISTRY, **self.cfg.dataset_params)
         series_iter = list(dataset.load())
 
-        results: List[dict] = []
         for series in series_iter:
             ts_name = series["metadata"]["dataset_name"]
             ts_data = series["series"]
@@ -120,8 +125,6 @@ class ExperimentRunner:
             )
             outcome["plot_path"] = ts_plot_path
             self.recorder.record_jsonl(outcome)
-
-        # --- persist all -------------------------------------------
 
         print(f"Experiment '{self.name}' finished. Results in {self.out_dir}")
 
