@@ -1,12 +1,12 @@
 model_name: "smollm2-135m"
 model_parameters:
-  max_new_tokens: 50
+  max_new_tokens: 150
   temperature: 1.0
   top_p: 0.9
   do_sample: true
 dataset_name: "darts"
 dataset_params:
-  dataset_names: ["AirPassengers", "MonthlyMilk", "HeartRate", "GasRateCO2", "Wooly", "Sunspots"]
+  dataset_names: ["AirPassengers", "MonthlyMilk", "HeartRate", "GasRateCO2", "Wooly"]
 tokenizer_name: "LLMTime"
 tokenizer_params:
   alpha: 0.99

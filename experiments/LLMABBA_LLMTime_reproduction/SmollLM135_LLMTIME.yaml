@@ -1,4 +1,4 @@
-model_name: "distilgpt2"
+model_name: "smollm2-135m"
 model_parameters:
   max_new_tokens: 150
   temperature: 1.0
@@ -7,10 +7,13 @@ model_parameters:
 dataset_name: "darts"
 dataset_params:
   dataset_names: ["AirPassengers", "MonthlyMilk", "HeartRate", "GasRateCO2", "Wooly"]
-tokenizer_name: "LLMTime"
+tokenizer_name: "LLM-ABBA"
 tokenizer_params:
-  alpha: 0.99
-  beta: 0.3
+  tol: 0.1
+  alpha: 0.1
+  init: 'kmeans'
+  k: 52
+  scl: 3.0
 input_data_factor: 0.8
 output_jsonl: "model_responses.jsonl"
 data_analyzers: [MAE, MSE, RMSE]
