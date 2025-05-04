@@ -66,8 +66,9 @@ class SeriesProcessor:
             "id": ts_name,
             "inverse_success": pred_success,
             "data": {
+                "original": safe_to_list(ts_data),
                 "original_split": safe_to_list(ts_data_split),
-                "reconstructed": safe_to_list(reconstructed),
+                "reconstructed_split": safe_to_list(reconstructed),
                 "predicted": safe_to_list(predicted),
             },
             "model": {
@@ -117,7 +118,7 @@ class ExperimentRunner:
             ts_plot_path = plot_series(
                 ts_name,
                 ts_data,
-                outcome["data"]["reconstructed"],
+                outcome["data"]["reconstructed_split"],
                 outcome["data"]["predicted"],
                 outcome["inverse_success"],
                 str(self.out_dir),
