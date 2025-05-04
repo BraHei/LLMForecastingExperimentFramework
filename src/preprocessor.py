@@ -64,9 +64,36 @@ class BaseTimeSeriesPreprocessor(ABC):
 #         else:
 #             raise ValueError("Decoder requires a previously fitted encoder.")
 
-
 # Can be improved later on for parallel processing
 class LLMABBAPreprocessor(BaseTimeSeriesPreprocessor):
+    def __init__(self, **encoder_params):
+        super().__init__()
+        self.tokenizer_type = "LLM-ABBA"
+        self.encoder_params = encoder_params
+
+    def filter_symbols(self, encoded_string):
+        allowed_set = set(self.encoder.string_[0])
+        symbol_list = list(encoded_string)
+        return [char for char in symbol_list if char in allowed_set]
+
+    def encode(self, time_series):
+        time_series = np.asarray(time_series)
+        self.encoder = LLMABBA(**self.encoder_params)
+        encoded_array = self.encoder.encode([time_series.tolist()])[0]
+        return ''.join(encoded_array)
+
+    def decode(self, encoded_string):
+        if self.encoder is not None:
+            filtered_list = self.filter_symbols(encoded_string)
+            if (len(list(encoded_string)) != len(filtered_list)):
+                print("WARNING: encoded string has reduced symbols")
+            responds = self.encoder.decode([filtered_list])
+            return responds[0]
+        else:
+            raise ValueError("Decoder requires a previously fitted encoder.")
+
+# Can be improved later on for parallel processing
+class LLMABBAEncoderSpaced(BaseTimeSeriesPreprocessor):
     def __init__(self, **encoder_params):
         super().__init__()
         self.tokenizer_type = "LLM-ABBA"
@@ -77,11 +104,11 @@ class LLMABBAPreprocessor(BaseTimeSeriesPreprocessor):
 
         self.encoder = LLMABBA(**self.encoder_params)
         encoded_array = self.encoder.encode([time_series.tolist()])[0]
-        return ''.join(encoded_array)
+        return ' '.join(encoded_array)
 
     def decode(self, encoded_string):
         if self.encoder is not None:
-            symbol_list = list(encoded_string)
+            symbol_list = list(encoded_string.replace(" ", ""))
             responds = self.encoder.decode([symbol_list])
             return responds[0]
         else:
@@ -130,5 +157,6 @@ class LLMTimePreprocessor(BaseTimeSeriesPreprocessor):
 
 PRETOKENIZER_REGISTRY = {
     "LLM-ABBA": LLMABBAPreprocessor,
+    "LLM-ABBA_SPACED": LLMABBAEncoderSpaced,
     "LLMTime": LLMTimePreprocessor,
 }
