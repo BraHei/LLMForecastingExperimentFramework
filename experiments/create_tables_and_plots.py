@@ -100,16 +100,17 @@ def plot_predictions_across_models(base_folder, output_folder):
         reconstructed = data["reconstructed"]
         r_end = len(reconstructed)
 
+        # Determine how far to plot based on longest prediction
+        max_pred_len = max((len(p) for p in data["models"].values()), default=0)
+        plot_end = min(len(original), r_end + max_pred_len)
+
         plt.figure(figsize=(12, 5))
-        plt.plot(range(len(original)), original, label="Original", linewidth=2, color='black')
+        plt.plot(range(plot_end), original[:plot_end], label="Original", linewidth=2, color='black')
         plt.plot(range(r_end), reconstructed, label="Reconstructed", linestyle=":", color='gray')
 
         for model, prediction in data["models"].items():
-            p_end = r_end + len(prediction)
-            if p_end > len(original):
-                prediction = prediction[:len(original) - r_end]  # trim if it overshoots
-                p_end = r_end + len(prediction)
-            x = list(range(r_end, p_end))
+            prediction = prediction[:plot_end - r_end]  # Trim if it goes beyond the original
+            x = list(range(r_end, r_end + len(prediction)))
             plt.plot(x, prediction, label=f"Prediction - {model}", linestyle='--')
 
         plt.title(f"{dataset} - Predictions by Model")
@@ -122,6 +123,7 @@ def plot_predictions_across_models(base_folder, output_folder):
         plt.close()
 
     print(f"Plots saved to: {output_dir.resolve()}")
+
 
 def main():
     parser = argparse.ArgumentParser(description="Aggregate metrics and plot time series predictions.")
