@@ -15,17 +15,18 @@ class ExperimentConfig:
     """
 
     # --- mandatory ------------------------------------------------------
-    tokenizer_name: str
+    preprocessor_name: str
     model_name: str
     dataset_name: str
 
 
     # --- optional / nested dicts ---------------------------------------
-    tokenizer_params: Dict[str, Any] = field(default_factory=dict)
+    preprocessor_params: Dict[str, Any] = field(default_factory=dict)
     model_parameters: Dict[str, Any] = field(default_factory=dict)
     dataset_params: Dict[str, Any] = field(default_factory=dict)
     input_data_length: Optional[int] = None
     input_data_factor: Optional[float] = None
+    instruction_string: Optional[str] = None
 
     # --- misc -----------------------------------------------------------
     data_analyzers: List[str] = field(default_factory=lambda: ["basic"])
@@ -36,7 +37,6 @@ class ExperimentConfig:
     # catch-all for forward compatibility
     extra: Dict[str, Any] = field(default_factory=dict, repr=False)
 
-    
     @classmethod
     def from_yaml(cls, path: str | Path) -> "ExperimentConfig":
         """Load *and* validate a YAML file into a config object."""
@@ -85,7 +85,7 @@ class ExperimentConfig:
     def build_experiment_name(self) -> str:
         """Deterministic but human-readable identifier that encodes the core setup."""
         base = (
-            f"PTOK-{self.tokenizer_name}_"
+            f"PTOK-{self.preprocessor_name}_"
             f"LLM-{self.model_name}_"
             f"NTOK{self.model_parameters.get('max_new_tokens', '?')}"
         )

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Tuple
 
+import os
 import torch
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -11,31 +12,6 @@ __all__ = [
     "MODEL_REGISTRY",
     "get_model",
 ]
-
-def _softmax(logits: torch.Tensor) -> torch.Tensor:
-    """ Numerically-stable softmax """
-    return torch.log_softmax(logits, dim=-1).exp()
-
-
-def _single_token_ids(tokenizer, chars: str) -> Dict[str, int]:
-    """Return mapping for *single* character tokens (digits, dot, comma).
-
-    We assume a **character-level tokenizer** (as used in the paper). If the tokenizer
-    merges digits (e.g. "23" –> a single token) the discrete-to-continuous method doesn’t
-    apply directly and the caller should fall back to sampling-based uncertainty. An
-    exception is raised so the experiment pipeline can catch & handle it.
-    """
-    mapping = {}
-    for c in chars:
-        token_ids = tokenizer.encode(c, add_special_tokens=False)
-        if len(token_ids) != 1:
-            raise ValueError(
-                f"Tokenizer does not treat '{c}' as a single token. "
-                "Use a character-level tokenizer or adapt mapping logic."
-            )
-        mapping[c] = token_ids[0]
-    return mapping
-
 
 class LMWrapper:
     def __init__(self, 
@@ -50,6 +26,11 @@ class LMWrapper:
                  do_sample: bool = False,
                  repetition_penalty: float = 1.0):
         
+        if use_auth_token:
+            access_token = access_token or os.getenv("HF_ACCESS_TOKEN", None)
+        else:
+            access_token = None
+
         self.checkpoint = checkpoint
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.max_new_tokens = max_new_tokens
@@ -258,8 +239,8 @@ class LMWrapper:
 
 MODEL_REGISTRY = {
     "distilgpt2": lambda **kwargs: LMWrapper(checkpoint="distilbert/distilgpt2", **kwargs),
-    "llama3-instruct": lambda **kwargs: LMWrapper(checkpoint="meta-llama/Meta-Llama-3.1-8B-Instruct", **kwargs),
-    "llama3": lambda **kwargs: LMWrapper(checkpoint="meta-llama/Meta-Llama-3.1-8B", **kwargs),
+    "llama3-8b-instruct": lambda **kwargs: LMWrapper(checkpoint="meta-llama/Meta-Llama-3.1-8B-Instruct", **kwargs),
+    "llama3-8b": lambda **kwargs: LMWrapper(checkpoint="meta-llama/Meta-Llama-3.1-8B", **kwargs),
     "smollm2-1.7b-instruct": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM2-1.7B-Instruct", **kwargs),
     "smollm2-1.7b": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM2-1.7B", **kwargs),
     "smollm2-135m-instruct": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM2-135M-Instruct", **kwargs),

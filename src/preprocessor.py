@@ -46,25 +46,6 @@ class BaseTimeSeriesPreprocessor(ABC):
         self.encoder = encoder
         print(f"Encoder loaded from {filepath}")
 
-
-# class FABBAPreprocessor(BaseTimeSeriesPreprocessor):
-#     def __init__(self, **encoder_params):
-#         super().__init__()
-#         self.tokenizer_type = "fABBA"
-#         self.encoder_params = encoder_params
-#         self.model_params = None
-
-#     def encode(self, time_series):
-#         self.encoder = fABBA(**self.encoder_params)
-#         return self.encoder.fit_transform(time_series)
-
-#     def decode(self, encoded_string, reference_point):
-#         if self.encoder is not None:
-#             return self.encoder.inverse_transform(encoded_string, start = reference_point)
-#         else:
-#             raise ValueError("Decoder requires a previously fitted encoder.")
-
-# Can be improved later on for parallel processing
 class LLMABBAPreprocessor(BaseTimeSeriesPreprocessor):
     def __init__(self, **encoder_params):
         super().__init__()
@@ -155,7 +136,7 @@ class LLMTimePreprocessor(BaseTimeSeriesPreprocessor):
         return time_series * self.scalar_q if self.scalar_basic else (time_series * self.scalar_q) + self.scalar_min_
 
 
-PRETOKENIZER_REGISTRY = {
+PREPROCESSOR_REGISTRY = {
     "LLM-ABBA": LLMABBAPreprocessor,
     "LLM-ABBA_SPACED": LLMABBAEncoderSpaced,
     "LLMTime": LLMTimePreprocessor,

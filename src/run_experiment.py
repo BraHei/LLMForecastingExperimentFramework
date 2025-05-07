@@ -15,7 +15,7 @@ from src.experiment_utils import (
     split_data
 )
 from src.available_datasets import DATASET_REGISTRY
-from src.preprocessor import PRETOKENIZER_REGISTRY
+from src.preprocessor import PREPROCESSOR_REGISTRY
 from src.lmwrapper import MODEL_REGISTRY
 from src.data_analyzers import DATA_ANALYZER_REGISTRY
 
@@ -26,7 +26,7 @@ class SeriesProcessor:
 
     def __init__(self, cfg: ExperimentConfig):
         self.cfg = cfg
-        self.tokenizer = build(cfg.tokenizer_name, PRETOKENIZER_REGISTRY, **cfg.tokenizer_params)
+        self.preprocessor = build(cfg.preprocessor_name, PREPROCESSOR_REGISTRY, **cfg.preprocessor_params)
         self.model = build(cfg.model_name, MODEL_REGISTRY, **cfg.model_parameters)
         self.analyzers = [build(name, DATA_ANALYZER_REGISTRY) for name in cfg.data_analyzers]
 
@@ -39,7 +39,12 @@ class SeriesProcessor:
             ts_data_split = split_data(ts_data, cfg.input_data_factor)
 
         # --- encode -------------------------------------------------
-        data_string = self.tokenizer.encode(ts_data_split)
+        data_string = self.preprocessor.encode(ts_data_split)
+
+        # --- preprend instruction -----------------------------------
+
+        if cfg.instruction_string is not None:
+            data_string = cfg.instruction_string + data_string
 
         # --- LLM interaction ---------------------------------------
         start = time.perf_counter()
@@ -47,8 +52,8 @@ class SeriesProcessor:
         latency = time.perf_counter() - start
 
         # --- decode -------------------------------------------------
-        reconstructed, _ = inverse_transform_safe(self.tokenizer, data_string)
-        predicted, pred_success = inverse_transform_safe(self.tokenizer, generated)
+        reconstructed, _ = inverse_transform_safe(self.preprocessor, data_string)
+        predicted, pred_success = inverse_transform_safe(self.preprocessor, generated)
 
         # --- metrics ----------------------------------------------
         analysis_result = {}
