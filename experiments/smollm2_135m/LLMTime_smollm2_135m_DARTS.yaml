@@ -5,8 +5,8 @@ model_parameters:
 dataset_name: "darts"
 dataset_params:
   dataset_names: ["AirPassengers", "AusBeer", "HeartRate", "MonthlyMilk", "Sunspots", "Temperature", "Wooly"]
-tokenizer_name: "LLMTime"
-tokenizer_params: {}
+preprocessor_name: "LLMTime"
+preprocessor_params: {}
 input_data_length: 800
 output_jsonl: "model_responses.jsonl"
 data_analyzers: [MAE, MSE, RMSE]

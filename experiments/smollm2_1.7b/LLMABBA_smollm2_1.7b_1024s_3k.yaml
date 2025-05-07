@@ -7,8 +7,8 @@ dataset_params:
   num_series: 10
   max_kernels: 3
   sequence_lenght: 1024
-tokenizer_name: "LLM-ABBA"
-tokenizer_params:
+preprocessor_name: "LLM-ABBA"
+preprocessor_params:
   tol: 0.1
   alpha: 0.1
 input_data_length: 800

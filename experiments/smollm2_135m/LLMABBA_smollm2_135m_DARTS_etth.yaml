@@ -5,8 +5,8 @@ model_parameters:
 dataset_name: "darts"
 dataset_params:
   dataset_names: ["ETTh1", "ETTh2"]
-tokenizer_name: "LLM-ABBA"
-tokenizer_params:
+preprocessor_name: "LLM-ABBA"
+preprocessor_params:
   tol: 0.1
   alpha: 0.1
 input_data_length: 800

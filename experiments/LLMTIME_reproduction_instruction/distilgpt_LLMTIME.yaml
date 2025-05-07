@@ -1,19 +1,17 @@
-model_name: "llama3"
+model_name: "distilgpt2"
 model_parameters:
   max_new_tokens: 150
   temperature: 1.0
   top_p: 0.9
-  do_sample: True
+  do_sample: true
 dataset_name: "darts"
 dataset_params:
   dataset_names: ["AirPassengers", "MonthlyMilk", "HeartRate", "GasRateCO2", "Wooly"]
-preprocessor_name: "LLM-ABBA"
-preprocessor_params: {}
-  # tol: 0.1
-  # alpha: 0.01
-  # init: 'kmeans'
-  # k: 52
-  # scl: 1.0
+preprocessor_name: "LLMTime"
+preprocessor_params:
+  alpha: 0.99
+  beta: 0.3
+instruction_string: “I want you to predict the next time steps of the following series:"
 input_data_factor: 0.8
 output_jsonl: "model_responses.jsonl"
 data_analyzers: [MAE, MSE, RMSE]

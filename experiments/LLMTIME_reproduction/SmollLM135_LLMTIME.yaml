@@ -7,8 +7,8 @@ model_parameters:
 dataset_name: "darts"
 dataset_params:
   dataset_names: ["AirPassengers", "MonthlyMilk", "HeartRate", "GasRateCO2", "Wooly"]
-tokenizer_name: "LLMTime"
-tokenizer_params:
+preprocessor_name: "LLMTime"
+preprocessor_params:
   alpha: 0.99
   beta: 0.3
 input_data_factor: 0.8
