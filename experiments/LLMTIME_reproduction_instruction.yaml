@@ -1,4 +1,4 @@
-model_name: "llama3-8b"
+model_name: ["distilgpt2", "smollm2-1.7b", "smollm2-135m", "llama3-8b"]
 model_parameters:
   max_new_tokens: 150
   temperature: 1.0
@@ -11,7 +11,8 @@ preprocessor_name: "LLMTime"
 preprocessor_params:
   alpha: 0.99
   beta: 0.3
+instruction_string: 'With the following Time Series, forecast the next 50 steps: '
 input_data_factor: 0.8
-instruction_string: “I want you to predict the next time steps of the following series:"
+output_dir: 'results/LLMTIME_reproduction_instruction'
 output_jsonl: "model_responses.jsonl"
 data_analyzers: [MAE, MSE, RMSE]
