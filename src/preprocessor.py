@@ -98,16 +98,13 @@ class LLMABBAEncoderSpaced(BaseTimeSeriesPreprocessor):
 # Defaul settings for LLaMa2 models as per paper. Basic is also default False, use these for current results
 # Reference https://github.com/ngruver/llmtime/blob/f74234c43e06de78774d94c0974371a87b1c6971/models/llmtime.py#L23
 class LLMTimePreprocessor(BaseTimeSeriesPreprocessor):
-    def __init__(self, settings=None, alpha = 0.99, beta = 0.3, basic = False):
+    def __init__(self, bit_sep = '', time_sep = ',', alpha = 0.99, beta = 0.3, basic = False):
         super().__init__()
         self.tokenizer_type = "LLMTime"
-        self.settings = None
-        if settings is not None:
-            self.settings = settings
-        else: 
-            self.settings = SerializerSettings()
-            self.settings.bit_sep = ''
-            self.settings.time_sep = ','
+
+        self.settings = SerializerSettings()
+        self.settings.bit_sep = bit_sep
+        self.settings.time_sep = time_sep
         
         self.scalar_alpha = alpha
         self.scalar_beta = beta
