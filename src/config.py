@@ -16,30 +16,32 @@ class ExperimentConfig:
 
     # --- mandatory ------------------------------------------------------
     preprocessor_name: str
-    model_name: str
+    model_name: Any
     dataset_name: str
 
 
     # --- optional / nested dicts ---------------------------------------
     preprocessor_params: Dict[str, Any] = field(default_factory=dict)
-    model_parameters: Dict[str, Any] = field(default_factory=dict)
+    model_parameters: Any = field(default_factory=dict)
     dataset_params: Dict[str, Any] = field(default_factory=dict)
-    input_data_length: Optional[int] = None
-    input_data_factor: Optional[float] = None
-    instruction_string: Optional[str] = None
+    input_data_length: Optional[Any] = None
+    input_data_factor: Optional[Any] = None
+    instruction_string: Optional[Any] = None
 
     # --- misc -----------------------------------------------------------
     data_analyzers: List[str] = field(default_factory=lambda: ["basic"])
-    experiment_name: Optional[str] = None
+    experiment_name: Optional[str] = ""
     output_dir: str = "results"
     seed: Optional[int] = None
+    build_experiment_name_flag: bool = True  #Hacky way to make multirun able to not generate a name
 
     # catch-all for forward compatibility
     extra: Dict[str, Any] = field(default_factory=dict, repr=False)
 
     @classmethod
-    def from_yaml(cls, path: str | Path) -> "ExperimentConfig":
+    def from_yaml(cls, path: str | Path, build_experiment_name_flag = True) -> "ExperimentConfig":
         """Load *and* validate a YAML file into a config object."""
+
         with open(path, "r") as f:
             raw: Dict[str, Any] = yaml.safe_load(f) or {}
 
@@ -49,21 +51,20 @@ class ExperimentConfig:
         for k, v in raw.items():
             (kwargs if k in known_keys else extra)[k] = v
 
+        kwargs["build_experiment_name_flag"] = build_experiment_name_flag #Hacky way to make multirun able to not generate a name
         cfg: ExperimentConfig = cls(**kwargs)  # type: ignore[arg-type]
         cfg.extra = extra
         cfg._post_init_validation(path)
         return cfg
     
-
     def __post_init__(self):
         if (self.input_data_length is None) == (self.input_data_factor is None):
             raise ValueError("Exactly one of 'input_data_length' or 'input_data_factor' must be set.")
 
-        if self.experiment_name == None:
+        if self.build_experiment_name_flag: #Hacky way to make multirun able to not generate a name
             self.experiment_name = self.build_experiment_name()
 
-        if self.output_dir == "results":
-            self.output_dir = str(Path("results") / self.experiment_name)
+        self.output_dir = str(Path(self.output_dir) / self.experiment_name)
 
     def _post_init_validation(self, source: str | Path) -> None:
         """Centralised sanity-checks so they’re not scattered across the code base."""

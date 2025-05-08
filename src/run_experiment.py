@@ -33,26 +33,27 @@ class SeriesProcessor:
     # --------------------------------------------------------------
     def __call__(self, ts_name: str, ts_data: List[float]) -> dict:
         # --- split data----------------------------------------------
-        if (cfg.input_data_length is not None):
-            ts_data_split = ts_data[:cfg.input_data_length]
+        if (self.cfg.input_data_length is not None):
+            ts_data_split = ts_data[:self.cfg.input_data_length]
         else:
-            ts_data_split = split_data(ts_data, cfg.input_data_factor)
+            ts_data_split = split_data(ts_data, self.cfg.input_data_factor)
 
         # --- encode -------------------------------------------------
         data_string = self.preprocessor.encode(ts_data_split)
+        
+        # --- reconstruct --------------------------------------------
+        reconstructed, _ = inverse_transform_safe(self.preprocessor, data_string)
 
         # --- preprend instruction -----------------------------------
-
-        if cfg.instruction_string is not None:
-            data_string = cfg.instruction_string + data_string
+        if self.cfg.instruction_string is not None:
+            data_string = self.cfg.instruction_string + data_string
 
         # --- LLM interaction ---------------------------------------
         start = time.perf_counter()
         generated = self.model.generate_response(data_string)
         latency = time.perf_counter() - start
 
-        # --- decode -------------------------------------------------
-        reconstructed, _ = inverse_transform_safe(self.preprocessor, data_string)
+        # --- decode prediction---------------------------------------
         predicted, pred_success = inverse_transform_safe(self.preprocessor, generated)
 
         # --- metrics ----------------------------------------------
