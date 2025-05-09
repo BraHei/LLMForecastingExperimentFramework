@@ -1,0 +1,12 @@
+model_name: "smollm2-1.7b"
+model_parameters:
+  max_new_tokens: 50
+  temperature: 1.0
+dataset_name: "darts"
+dataset_params:
+  dataset_names: ["Temperature"]
+preprocessor_name: "LLMTime"
+preprocessor_params: {}
+input_data_length: 800
+output_jsonl: "model_responses.jsonl"
+data_analyzers: [MAE, MSE, RMSE]

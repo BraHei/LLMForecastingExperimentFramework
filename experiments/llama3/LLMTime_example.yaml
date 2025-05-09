@@ -1,0 +1,12 @@
+model_name: "llama3-8b"
+model_parameters:
+  max_new_tokens: 50
+  temperature: 1.0
+dataset_name: "darts"
+dataset_params:
+  dataset_names: ["Temperature"]
+preprocessor_name: "LLMTime"
+preprocessor_params: {}
+input_data_factor: 0.8
+output_jsonl: "model_responses.jsonl"
+data_analyzers: [MAE, MSE, RMSE]
