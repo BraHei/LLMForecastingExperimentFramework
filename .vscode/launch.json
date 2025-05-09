@@ -7,10 +7,10 @@
             "name": "Run Experiment",
             "type": "debugpy",
             "request": "launch",
-            "module": "src.run_experiment",
+            "module": "src.multirun_experiment",
             "args": [
                 "--config",
-                "experiments/LLMTIME_reproduction/distilgpt_LLMTIME.yaml"
+                "experiments/LLMTIME_reproduction_instruction.yaml"
             ],
             "console": "integratedTerminal",
             "justMyCode": false,
