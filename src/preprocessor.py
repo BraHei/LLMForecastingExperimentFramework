@@ -129,7 +129,7 @@ class LLMTimePreprocessor(BaseTimeSeriesPreprocessor):
         return serialize_arr(np.array(time_series), self.settings)
 
     def decode(self, encoded_string):
-        time_series = deserialize_str(encoded_string, self.settings, True)
+        time_series = deserialize_str(encoded_string, self.settings, ignore_last = True)
         return time_series * self.scalar_q if self.scalar_basic else (time_series * self.scalar_q) + self.scalar_min_
 
 
