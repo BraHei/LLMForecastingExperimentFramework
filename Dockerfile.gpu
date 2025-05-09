@@ -9,6 +9,21 @@ RUN apt-get update && apt-get install -y \
     git vim curl wget htop build-essential python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Install BitsAndBytes: Current ROCm 6.4 does not work well (at all) with bitsandbytes. Perhaps in the future
+# RUN git clone --depth 1 https://github.com/ROCm/bitsandbytes && \
+#     cd bitsandbytes && \
+#     git checkout rocm_enabled_multi_backend && \
+#     pip uninstall -y bitsandbytes && \
+#     pip install -r requirements-dev.txt && \
+#     cmake -DCOMPUTE_BACKEND=hip \
+#             -DBNB_ROCM_ARCH=gfx1030 \
+#             -DBNB_USE_HIPBLASLT=ON \
+#             -DBNB_COMPAT_WITH_CUDA=ON \
+#             -S . -B build && \
+#     cmake --build build -j && \
+#     cp bitsandbytes/libbitsandbytes_rocm64.so ./ && \
+#     BNB_BUILD_DEBUG=OFF python3 -m pip install . --no-deps
+
 # Install Python dependencies globally
 RUN pip freeze | grep torch > torch_version.txt
 COPY requirements.txt .
@@ -19,6 +34,12 @@ RUN pip install -r requirements.txt --constraint=torch_version.txt
 # Set working directory
 WORKDIR /workspace
 ENV PYTHONPATH=/workspace
+ENV PYTORCH_HIP_ALLOC_CONF=expandable_segments:True
+# ENV HIP_VISIBLE_DEVICES=0
+# ENV LD_LIBRARY_PATH=/opt/rocm/lib:/opt/rocm/lib64
+# ENV ROCBLAS_TENSILE_LIBPATH=/opt/rocm/lib/rocblas/library
+# ENV HIPBLASLT_TENSILE_LIBPATH=/opt/rocm/lib/rocblas/library
+
 
 # Default command (optional override via `docker run`)
 CMD ["/bin/bash"]
