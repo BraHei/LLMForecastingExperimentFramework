@@ -26,3 +26,4 @@ regex==2024.11.6
 typing_extensions==4.12.2
 
 u8darts==0.34.0
+pytorch_lightning==2.5.1.post0

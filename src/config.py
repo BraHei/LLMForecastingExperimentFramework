@@ -69,7 +69,7 @@ class ExperimentConfig:
     def _post_init_validation(self, source: str | Path) -> None:
         """Centralised sanity-checks so they’re not scattered across the code base."""
         
-        if self.model_parameters.get("max_new_tokens", 0) <= 0:
+        if self.model_parameters.get("max_new_tokens", 1) <= 0:
             raise ValueError(
                 f"{source}: 'model_parameters.max_new_tokens' must be positive"
             )

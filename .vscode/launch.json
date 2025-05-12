@@ -7,10 +7,11 @@
             "name": "Run Experiment",
             "type": "debugpy",
             "request": "launch",
-            "module": "src.multirun_experiment",
+            "module": "src.darts_baseline_runner",
             "args": [
                 "--config",
-                "experiments/LLMTIME_reproduction_instruction.yaml"
+                "experiments/baseline.yaml",
+                "--multirun"
             ],
             "console": "integratedTerminal",
             "justMyCode": false,
