@@ -35,14 +35,14 @@ def build_metric_table(base_folder):
     for subdir in base_path.iterdir():
         if subdir.is_dir():
             config_path = subdir / "experiment_config.yaml"
-            results_path = ""
+            results_path = subdir / "results.jsonl"
             if config_path.exists():
                 output_filename = extract_result_file_name(config_path)
                 results_path = subdir / output_filename
 
-                if not config_path.exists():
+                if not results_path.exists():
                     print("WARNING: Couldnt find the output file named f{output_filename}, defaulting back to result.jsonl")
-                    results_path = subdir / "results.json;"
+                    results_path = subdir / "results.jsonl"
 
             if config_path.exists() and results_path.exists():
                 model_name = extract_model_name(config_path)
@@ -82,14 +82,15 @@ def plot_predictions_across_models(base_folder, output_folder):
     for subdir in base_path.iterdir():
         if subdir.is_dir():
             config_path = subdir / "experiment_config.yaml"
-            results_path = ""
+            results_path = subdir / "results.jsonl"
+
             if config_path.exists():
                 output_filename = extract_result_file_name(config_path)
                 results_path = subdir / output_filename
 
-                if not config_path.exists():
+                if not results_path.exists():
                     print("WARNING: Couldnt find the output file named f{output_filename}, defaulting back to result.jsonl")
-                    results_path = subdir / "results.json;"
+                    results_path = subdir / "results.jsonl"
 
             if config_path.exists() and results_path.exists():
                 model_name = extract_model_name(config_path)

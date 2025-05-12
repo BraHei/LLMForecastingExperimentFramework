@@ -45,7 +45,7 @@
             "module": "experiments.create_tables_and_plots",
             "args": [
                 "--input_folder",
-                "results/Darts_baseline"
+                "results/LLMTIME_reproduction"
             ],
             "console": "integratedTerminal",
             "justMyCode": false,
