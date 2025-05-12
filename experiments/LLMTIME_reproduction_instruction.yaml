@@ -11,7 +11,7 @@ preprocessor_name: "LLMTime"
 preprocessor_params:
   alpha: 0.99
   beta: 0.3
-instruction_string: 'With the following Time Series, forecast the next 50 steps: '
+instruction_string: ['Forecast the next 25 steps: ', 'Forecast the next 50 steps: ', 'Forecast the next 75 steps: ', 'Predict the next 50 steps: ', 'With the following Time Series, forecast the next 50 steps: ', 'Predict the next 50 steps given the previous steps: ']
 input_data_factor: 0.8
 output_dir: 'results/LLMTIME_reproduction_instruction'
 output_jsonl: "model_responses.jsonl"
