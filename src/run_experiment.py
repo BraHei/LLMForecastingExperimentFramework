@@ -88,16 +88,14 @@ class SeriesProcessor:
 
 # ---------------------------------------------------------------------
 class ResultRecorder:
-    """Handles IO concerns only."""
-
-    def __init__(self, out_dir: Path):
+    def __init__(self, out_dir: Path, jsonl_file: str):
         self.out_dir = out_dir
+        self.jsonl_path = self.out_dir / jsonl_file
         self.out_dir.mkdir(parents=True, exist_ok=True)
-        self.jsonl_path = self.out_dir / "results.jsonl"
 
-    def record_jsonl(self, results: Iterable[dict]) -> None:
+    def record_jsonl(self, result: dict) -> None:
         with open(self.jsonl_path, "a") as f:
-            f.write(json.dumps(results) + "\n")
+            f.write(json.dumps(result) + "\n")
         fix_output_ownership(self.out_dir)
 
 # ---------------------------------------------------------------------
@@ -107,7 +105,7 @@ class ExperimentRunner:
         self.name = cfg.experiment_name
         self.out_dir = Path(cfg.output_dir)
         self.processor = SeriesProcessor(cfg)
-        self.recorder = ResultRecorder(self.out_dir)
+        self.recorder = ResultRecorder(self.out_dir, cfg.output_jsonl)
 
     # --------------------------------------------------------------
     def run(self) -> None:

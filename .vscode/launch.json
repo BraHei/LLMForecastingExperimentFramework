@@ -1,10 +1,32 @@
 {
     "version": "0.2.0",
     "configurations": [
-
-
         {
             "name": "Run Experiment",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.run_experiment",
+            "args": [
+                "--config",
+                "experiments/llama3/LLMABBA_llama3_1024s_3k_params_improve.yaml",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+        },
+        {
+            "name": "Multirun Experiment",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.multirun_experiment",
+            "args": [
+                "--config",
+                "experiments/LLMABBA_LLMTime_reproduction.yaml",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+        },
+        {
+            "name": "Run Baseline",
             "type": "debugpy",
             "request": "launch",
             "module": "src.darts_baseline_runner",
@@ -12,6 +34,18 @@
                 "--config",
                 "experiments/baseline.yaml",
                 "--multirun"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+        },
+        {
+            "name": "Create Plots",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "experiments.create_tables_and_plots",
+            "args": [
+                "--input_folder",
+                "results/Darts_baseline"
             ],
             "console": "integratedTerminal",
             "justMyCode": false,

@@ -22,6 +22,11 @@ def extract_model_name(config_path):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
         return config.get('model_name', 'unknown_model')
+    
+def extract_result_file_name(config_path):
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+        return config.get('output_jsonl', 'unknown_file_name')
 
 def build_metric_table(base_folder):
     base_path = Path(base_folder)
@@ -30,7 +35,14 @@ def build_metric_table(base_folder):
     for subdir in base_path.iterdir():
         if subdir.is_dir():
             config_path = subdir / "experiment_config.yaml"
-            results_path = subdir / "results.jsonl"
+            results_path = ""
+            if config_path.exists():
+                output_filename = extract_result_file_name(config_path)
+                results_path = subdir / output_filename
+
+                if not config_path.exists():
+                    print("WARNING: Couldnt find the output file named f{output_filename}, defaulting back to result.jsonl")
+                    results_path = subdir / "results.json;"
 
             if config_path.exists() and results_path.exists():
                 model_name = extract_model_name(config_path)
@@ -40,7 +52,7 @@ def build_metric_table(base_folder):
                         entry = json.loads(line.strip())
                         dataset = entry['id']
                         mae = entry['metrics'].get('MeanAbsoluteError')
-                        mse = entry['metrics'].get('MeanSquareError')
+                        # mse = entry['metrics'].get('MeanSquareError')
 
                         records.append({
                             "Model": model_name,
@@ -48,12 +60,12 @@ def build_metric_table(base_folder):
                             "Metric": "MAE",
                             "Value": mae
                         })
-                        records.append({
-                            "Model": model_name,
-                            "Dataset": dataset,
-                            "Metric": "MSE",
-                            "Value": mse
-                        })
+                        # records.append({
+                        #     "Model": model_name,
+                        #     "Dataset": dataset,
+                        #     "Metric": "MSE",
+                        #     "Value": mse
+                        # })
 
     df = pd.DataFrame(records)
     metric_table = df.pivot_table(index="Dataset", columns=["Model", "Metric"], values="Value")
@@ -70,7 +82,14 @@ def plot_predictions_across_models(base_folder, output_folder):
     for subdir in base_path.iterdir():
         if subdir.is_dir():
             config_path = subdir / "experiment_config.yaml"
-            results_path = subdir / "results.jsonl"
+            results_path = ""
+            if config_path.exists():
+                output_filename = extract_result_file_name(config_path)
+                results_path = subdir / output_filename
+
+                if not config_path.exists():
+                    print("WARNING: Couldnt find the output file named f{output_filename}, defaulting back to result.jsonl")
+                    results_path = subdir / "results.json;"
 
             if config_path.exists() and results_path.exists():
                 model_name = extract_model_name(config_path)
@@ -127,7 +146,7 @@ def plot_predictions_across_models(base_folder, output_folder):
 
 def main():
     parser = argparse.ArgumentParser(description="Aggregate metrics and plot time series predictions.")
-    parser.add_argument("input_folder", type=str, help="Path to the root experiment folder (e.g., LLMABBA_LLMTimeComparison)")
+    parser.add_argument("--input_folder", type=str, help="Path to the root experiment folder (e.g., LLMABBA_LLMTimeComparison)")
     parser.add_argument("--output_folder", type=str, default=None, help="Directory where metric summary and plots will be saved")
 
     args = parser.parse_args()

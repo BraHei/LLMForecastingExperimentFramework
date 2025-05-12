@@ -74,7 +74,7 @@ class DartsSeriesProcessor:
         }
 
         return {
-            "id": f"{ts_name}_{self.model_name}",
+            "id": f"{ts_name}",
             "inverse_success": True,
             "data": {
                 "original": safe_to_list(ts_data),
