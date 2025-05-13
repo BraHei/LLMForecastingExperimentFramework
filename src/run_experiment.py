@@ -105,7 +105,8 @@ class ExperimentRunner:
         self.name = cfg.experiment_name
         self.out_dir = Path(cfg.output_dir)
         self.processor = SeriesProcessor(cfg)
-        self.recorder = ResultRecorder(self.out_dir, cfg.output_jsonl)
+        self.jsonl_filename = cfg.extra.get("output_jsonl", "results.jsonl")
+        self.recorder = ResultRecorder(self.out_dir, self.jsonl_filename)
 
     # --------------------------------------------------------------
     def run(self) -> None:
