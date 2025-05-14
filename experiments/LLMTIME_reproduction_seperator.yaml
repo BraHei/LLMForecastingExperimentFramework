@@ -1,5 +1,4 @@
-model_name: ["distilgpt2", "smollm2-1.7b", "smollm2-135m", "llama3-8b"]
-# model_name: ["llama3-8b"]
+model_name: ["distilgpt2", "smollm2-135m"]
 model_parameters:
   device: 'cpu'
   max_new_tokens: 150
@@ -11,43 +10,32 @@ dataset_params:
   dataset_names: ["AirPassengers", "MonthlyMilk", "HeartRate", "GasRateCO2", "Wooly"]
 preprocessor_name: "LLMTime"
 preprocessor_params:
-  - time_sep: ' ,'
-    bit_sep: ' '
-    prec: 3
-    alpha: 0.99
-    beta: 0.3
+preprocessor_params:
+  - time_sep: ','
   - time_sep: ', '
-    prec: 3
-    alpha: 0.99
-    beta: 0.3
   - time_sep: ' ,'
-    prec: 3
-    alpha: 0.99
-    beta: 0.3
-  - time_sep: ' '
-    prec: 3
-    alpha: 0.99
-    beta: 0.3
-  - time_sep: ' #'
-    prec: 3
-    alpha: 0.99
-    beta: 0.3
-  - time_sep: ' $'
-    prec: 3
-    alpha: 0.99
-    beta: 0.3
-  - time_sep: '-'
-    prec: 3
-    alpha: 0.99
-    beta: 0.3
-  - time_sep: '}{'
-    prec: 3
-    alpha: 0.99
-    beta: 0.3
   - time_sep: ')('
-    prec: 3
-    alpha: 0.99
-    beta: 0.3
+  - time_sep: '-'
+  - time_sep: ' , '
+  - time_sep: '|'
+  - time_sep: ' | '
+  - time_sep: '/'
+  - time_sep: ' / '
+  - time_sep: '\\'
+  - time_sep: '_'
+  - time_sep: '...'
+  - time_sep: ' ) ( '
+  - time_sep: ']['
+  - time_sep: '}{'
+  - time_sep: '~'
+  - time_sep: '^'
+  - time_sep: '#'
+  - time_sep: '@'
+  - time_sep: '::'
+  - time_sep: '=>'
+  - time_sep: '->'
+  - time_sep: '\n'
+  - time_sep: '\t'
 input_data_factor: 0.8
 output_dir: 'results/LLMTIME_reproduction_seperator'
 output_jsonl: "model_responses.jsonl"
