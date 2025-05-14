@@ -9,11 +9,6 @@ import pandas as pd
 
 from pathlib import Path
 
-compressed_instruction = {'None':'None', 'Forecast the next 25 steps: ' : 'F25S', 
-                          'Predict the next 50 steps: ': 'P50S', 
-                          'With the following Time Series, forecast the next 50 steps: ': 'WF50S', 
-                          'Predict the next 50 steps given the previous steps: ' : 'PN50S'}
-
 def extract_mae_from_results(results_path):
     maes = {}
     with open(results_path, 'r') as f:
@@ -29,81 +24,85 @@ def extract_model_name(config_path):
         config = yaml.safe_load(f)
         return config.get('model_name', 'unknown_model')
 
-def extract_compressed_instruction(config_path):
+def extract_instruction_shorthand(config_path):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
-        instruction = config.get('instruction_string', '-')
-        if instruction in compressed_instruction:
-            instruction = compressed_instruction[instruction]
+        instr = config.get('instruction_object')
+        if isinstance(instr, dict):
+            return instr.get('name', 'None')
+        elif isinstance(instr, list) and instr:
+            # if it’s a list, take the first one
+            return instr[0].get('name', 'None')
         else:
-            print("WARNING: Couldn't find instruction in lookup table, its uncompressed")
-        return instruction 
-    
-def extract_compressed_seperator(config_path):
+            return 'None'
+
+def extract_separator(config_path):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
-        return config.get('preprocessor_params', {}).get('time_sep', 'no_seperator')
+        return config.get('preprocessor_params', {}).get('time_sep', 'no_separator')
 
 def extract_result_file_name(config_path):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
         return config.get('output_jsonl', 'unknown_file_name')
 
-def build_metric_table(base_folder, instruction, seperator):
+def build_metric_table(base_folder, include_instruction, include_separator):
     base_path = Path(base_folder)
     records = []
 
-    columns_to_use = ["Model", "Metric"]
-
-    if (instruction):
-        columns_to_use.append("Instruction")
-
-    if (seperator):
-        columns_to_use.append("Seperator")
+    cols = ["Model", "Metric"]
+    if include_instruction:
+        cols.append("Instruction")
+    if include_separator:
+        cols.append("Separator")
 
     for subdir in base_path.iterdir():
-        if subdir.is_dir():
-            config_path = subdir / "experiment_config.yaml"
+        if not subdir.is_dir():
+            continue
+
+        config_path = subdir / "experiment_config.yaml"
+        if not config_path.exists():
+            continue
+
+        output_filename = extract_result_file_name(config_path)
+        results_path = subdir / output_filename
+        if not results_path.exists():
+            print(f"WARNING: Couldn’t find the output file named {output_filename}, falling back to results.jsonl")
             results_path = subdir / "results.jsonl"
-            if config_path.exists():
-                output_filename = extract_result_file_name(config_path)
-                results_path = subdir / output_filename
+            if not results_path.exists():
+                continue
 
-                if not results_path.exists():
-                    print("WARNING: Couldnt find the output file named f{output_filename}, defaulting back to result.jsonl")
-                    results_path = subdir / "results.jsonl"
+        model_name = extract_model_name(config_path)
+        instr_code = extract_instruction_shorthand(config_path)
+        sep_code   = extract_separator(config_path)
 
-            if config_path.exists() and results_path.exists():
-                model_name = extract_model_name(config_path)
-                used_instruction_compressed = extract_compressed_instruction(config_path)
-                used_seperator = extract_compressed_seperator(config_path)
+        with open(results_path, 'r') as f:
+            for line in f:
+                entry = json.loads(line.strip())
+                dataset = entry['id']
+                mae     = entry['metrics'].get('MeanAbsoluteError')
 
-                with open(results_path, 'r') as f:
-                    for line in f:
-                        entry = json.loads(line.strip())
-                        dataset = entry['id']
-                        mae = entry['metrics'].get('MeanAbsoluteError')
-                        # mse = entry['metrics'].get('MeanSquareError')
+                rec = {
+                    "Model": model_name,
+                    "Metric": "MAE",
+                    "Value": mae,
+                }
+                if include_instruction:
+                    rec["Instruction"] = instr_code
+                if include_separator:
+                    rec["Separator"]   = sep_code
+                rec["Dataset"] = dataset
 
-                        records.append({
-                            "Model": model_name,
-                            "Instruction": used_instruction_compressed,
-                            "Seperator": used_seperator,
-                            "Dataset": dataset,
-                            "Metric": "MAE",
-                            "Value": mae
-                        })
-                        # records.append({
-                        #     "Model": model_name,
-                        #     "Dataset": dataset,
-                        #     "Metric": "MSE",
-                        #     "Value": mse
-                        # })
+                records.append(rec)
 
     df = pd.DataFrame(records)
-    metric_table = df.pivot_table(index="Dataset", columns=columns_to_use, values="Value")
-    metric_table.columns = pd.MultiIndex.from_tuples(metric_table.columns)
-    return metric_table
+    table = df.pivot_table(
+        index="Dataset",
+        columns=cols,
+        values="Value"
+    )
+    table.columns = pd.MultiIndex.from_tuples(table.columns)
+    return table
 
 def plot_predictions_across_models(base_folder, output_folder):
     base_path = Path(base_folder)
@@ -113,114 +112,126 @@ def plot_predictions_across_models(base_folder, output_folder):
     series_data = {}
 
     for subdir in base_path.iterdir():
-        if subdir.is_dir():
-            config_path = subdir / "experiment_config.yaml"
+        if not subdir.is_dir():
+            continue
+
+        config_path = subdir / "experiment_config.yaml"
+        if not config_path.exists():
+            continue
+
+        output_filename = extract_result_file_name(config_path)
+        results_path = subdir / output_filename
+        if not results_path.exists():
+            print(f"WARNING: Couldn’t find the output file named {output_filename}, falling back to results.jsonl")
             results_path = subdir / "results.jsonl"
+            if not results_path.exists():
+                continue
 
-            if config_path.exists():
-                output_filename = extract_result_file_name(config_path)
-                results_path = subdir / output_filename
+        model_name = extract_model_name(config_path)
 
-                if not results_path.exists():
-                    print("WARNING: Couldnt find the output file named f{output_filename}, defaulting back to result.jsonl")
-                    results_path = subdir / "results.jsonl"
+        with open(results_path, 'r') as f:
+            for line in f:
+                entry = json.loads(line.strip())
+                ds = entry["id"]
+                orig = entry["data"]["original"]
+                recn = entry["data"]["reconstructed_split"]
+                pred = entry["data"].get("predicted")
 
-            if config_path.exists() and results_path.exists():
-                model_name = extract_model_name(config_path)
+                series_data.setdefault(ds, {
+                    "original": orig,
+                    "reconstructed": recn,
+                    "models": {}
+                })
+                if pred:
+                    series_data[ds]["models"][model_name] = pred
+                else:
+                    print(f"Warning: No 'predicted' values for model '{model_name}' on dataset '{ds}'")
 
-                with open(results_path, 'r') as f:
-                    for line in f:
-                        entry = json.loads(line.strip())
-                        dataset_id = entry["id"]
-                        original = entry["data"]["original"]
-                        reconstructed = entry["data"]["reconstructed_split"]
-                        predicted = entry["data"].get("predicted", None)
-
-                        if dataset_id not in series_data:
-                            series_data[dataset_id] = {
-                                "original": original,
-                                "reconstructed": reconstructed,
-                                "models": {}
-                            }
-
-                        if predicted:
-                            series_data[dataset_id]["models"][model_name] = predicted
-                        else:
-                            print(f"Warning: No 'predicted' values for model '{model_name}' on dataset '{dataset_id}'")
-
-    for dataset, data in series_data.items():
-        original = data["original"]
-        reconstructed = data["reconstructed"]
-        r_end = len(reconstructed)
-
-        # Determine how far to plot based on longest prediction
-        max_pred_len = max((len(p) for p in data["models"].values()), default=0)
-        plot_end = min(len(original), r_end + max_pred_len)
+    for ds, data in series_data.items():
+        orig = data["original"]
+        recn = data["reconstructed"]
+        r_end = len(recn)
+        max_pred = max((len(p) for p in data["models"].values()), default=0)
+        plot_end = min(len(orig), r_end + max_pred)
 
         plt.figure(figsize=(12, 5))
-        plt.plot(range(plot_end), original[:plot_end], label="Original", linewidth=2, color='black')
-        plt.plot(range(r_end), reconstructed, label="Reconstructed", linestyle=":", color='gray')
+        plt.plot(range(plot_end), orig[:plot_end], label="Original", linewidth=2)
+        plt.plot(range(r_end), recn, linestyle=":", label="Reconstructed")
 
-        for model, prediction in data["models"].items():
-            prediction = prediction[:plot_end - r_end]  # Trim if it goes beyond the original
-            x = list(range(r_end, r_end + len(prediction)))
-            plt.plot(x, prediction, label=f"Prediction - {model}", linestyle='--')
+        for mdl, pred in data["models"].items():
+            xs = range(r_end, r_end + min(len(pred), plot_end - r_end))
+            plt.plot(xs, pred[:plot_end-r_end], linestyle="--", label=f"Prediction - {mdl}")
 
-        plt.title(f"{dataset} - Predictions by Model")
+        plt.title(f"{ds} - Predictions by Model")
         plt.xlabel("Time")
         plt.ylabel("Value")
         plt.legend()
         plt.grid(True)
         plt.tight_layout()
-        plt.savefig(output_dir / f"{dataset}_all_models.png")
+        plt.savefig(output_dir / f"{ds}_all_models.png")
         plt.close()
 
     print(f"Plots saved to: {output_dir.resolve()}")
 
-def process_instruction_seperator(df, output_dir):
-    normalized_df = (df - df.min(axis=1).values[:, None]) / (df.max(axis=1) - df.min(axis=1)).values[:, None]
-    mean_scores = normalized_df.mean(axis=0)
-    sorted_scores = mean_scores.sort_values()
+def process_instruction_separator(df, output_dir):
+    normalized = (df - df.min(axis=1).values[:, None]) / (df.max(axis=1) - df.min(axis=1)).values[:, None]
+    mean_scores = normalized.mean(axis=0).sort_values()
 
-    print("\n Normalized Summary Table:\n", sorted_scores)
+    print("\nNormalized Summary:\n", mean_scores)
     normalized_file = output_dir / "normalized_summary.tsv"
-    sorted_scores.to_csv(normalized_file, sep="\t")
-    print(f"\n Saved normalized summary to {normalized_file.resolve()}")
+    mean_scores.to_csv(normalized_file, sep="\t")
+    print(f"Saved normalized summary to {normalized_file.resolve()}")
 
-    sorted_scores.plot(kind='barh', figsize=(10, 6), title='Avg Normalized MAE per (Instruction + Separator)')
-    plt.xlabel('Avg Normalized MAE (lower is better)')
+    ax = mean_scores.plot(kind='barh', figsize=(10, 6), title='Avg Normalized MAE per (Instr + Sep)')
+    ax.set_xlabel('Avg Normalized MAE (lower is better)')
     plt.tight_layout()
     plt.savefig(output_dir / "avg_normalized_mae.png", bbox_inches='tight')
+    plt.close()
 
 def main():
-    parser = argparse.ArgumentParser(description="Aggregate metrics and plot time series predictions.")
-    parser.add_argument("--input_folder", type=str, help="Path to the root experiment folder (e.g., LLMABBA_LLMTimeComparison)")
-    parser.add_argument("--output_folder", type=str, default=None, help="Directory where metric summary and plots will be saved")
-    parser.add_argument("--instruction", type=bool, default=False, help="Path to the root experiment folder (e.g., LLMABBA_LLMTimeComparison)")
-    parser.add_argument("--seperator", type=bool, default=False, help="Path to the root experiment folder (e.g., LLMABBA_LLMTimeComparison)")
+    parser = argparse.ArgumentParser(
+        description="Aggregate metrics and plot time series predictions."
+    )
+    parser.add_argument(
+        "--input_folder", type=str, required=True,
+        help="Root experiment folder (e.g., LLMABBA_LLMTimeComparison)"
+    )
+    parser.add_argument(
+        "--output_folder", type=str, default=None,
+        help="Directory where outputs will be saved"
+    )
+    parser.add_argument(
+        "--instruction", action="store_true",
+        help="Include the Instruction dimension in the summary"
+    )
+    parser.add_argument(
+        "--separator", action="store_true",
+        help="Include the Separator dimension in the summary"
+    )
 
     args = parser.parse_args()
-    
-    output_dir = Path(args.output_folder) if args.output_folder else Path(args.input_folder)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    
-    get_instruction = args.seperator
-    get_seperator = args.instruction
 
-    print(f" Scanning experiment results in: {args.input_folder}")
-    metric_df = build_metric_table(args.input_folder, get_instruction, get_seperator)
-    print("\n Metric Summary Table:\n", metric_df)
+    out_dir = Path(args.output_folder) if args.output_folder else Path(args.input_folder)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Save to tsv
-    metric_file = output_dir / "metric_summary.tsv"
+    print(f"Scanning experiment results in: {args.input_folder}")
+    metric_df = build_metric_table(
+        args.input_folder,
+        include_instruction=args.instruction,
+        include_separator=args.separator
+    )
+    print("\nMetric Summary Table:\n", metric_df)
+
+    # Save summary
+    metric_file = out_dir / "metric_summary.tsv"
     metric_df.to_csv(metric_file, sep="\t")
-    print(f"\n Saved metric summary to {metric_file.resolve()}")
+    print(f"Saved metric summary to {metric_file.resolve()}")
 
-    # Plot
-    if (get_instruction or get_seperator):
-        process_instruction_seperator(metric_df, output_dir)
+    # Either process instr+sep or plot
+    if args.instruction or args.separator:
+        process_instruction_separator(metric_df, out_dir)
     else:
-        plot_predictions_across_models(args.input_folder, output_folder=output_dir)
+        plot_predictions_across_models(args.input_folder, output_folder=out_dir)
 
 if __name__ == "__main__":
     main()

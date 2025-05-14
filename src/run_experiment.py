@@ -26,45 +26,64 @@ class SeriesProcessor:
 
     def __init__(self, cfg: ExperimentConfig):
         self.cfg = cfg
-        self.preprocessor = build(cfg.preprocessor_name, PREPROCESSOR_REGISTRY, **cfg.preprocessor_params)
-        self.model = build(cfg.model_name, MODEL_REGISTRY, **cfg.model_parameters)
+        self.preprocessor = build(
+            cfg.preprocessor_name,
+            PREPROCESSOR_REGISTRY,
+            **cfg.preprocessor_params
+        )
+        self.model = build(
+            cfg.model_name,
+            MODEL_REGISTRY,
+            **cfg.model_parameters
+        )
         self.analyzers = [build(name, DATA_ANALYZER_REGISTRY) for name in cfg.data_analyzers]
 
     # --------------------------------------------------------------
     def __call__(self, ts_name: str, ts_data: List[float]) -> dict:
-        # --- split data----------------------------------------------
-        if (self.cfg.input_data_length is not None):
-            ts_data_split = ts_data[:self.cfg.input_data_length]
+        # --- split data ---------------------------------------------
+        if self.cfg.input_data_length is not None:
+            ts_data_split = ts_data[: self.cfg.input_data_length]
         else:
             ts_data_split = split_data(ts_data, self.cfg.input_data_factor)
 
-        # --- encode -------------------------------------------------
+        # --- encode --------------------------------------------------
         data_string = self.preprocessor.encode(ts_data_split)
-        
-        # --- reconstruct --------------------------------------------
+
+        # --- reconstruct ---------------------------------------------
         reconstructed, _ = inverse_transform_safe(self.preprocessor, data_string)
 
-        # --- preprend instruction -----------------------------------
-        if self.cfg.instruction_string is not None:
-            data_string = self.cfg.instruction_string + data_string
+        # --- prepend instruction ------------------------------------
+        if self.cfg.instruction_object:
+            first = self.cfg.instruction_object[0]
+            instr_text = first.get("text", "")
+            try:
+                formatted = instr_text.format(
+                    ts_name=ts_name,
+                    input_data=data_string,
+                    input_length=len(ts_data_split),
+                    total_length=len(ts_data)
+                )
+            except KeyError:
+                formatted = instr_text + data_string
+            data_string = formatted
 
-        # --- LLM interaction ---------------------------------------
+        # --- LLM interaction -----------------------------------------
         start = time.perf_counter()
         generated = self.model.generate_response(data_string)
         latency = time.perf_counter() - start
 
-        # --- decode prediction---------------------------------------
+        # --- decode prediction ---------------------------------------
         predicted, pred_success = inverse_transform_safe(self.preprocessor, generated)
 
-        # --- metrics ----------------------------------------------
-        analysis_result = {}
+        # --- metrics --------------------------------------------------
+        analysis_result: dict = {}
         if pred_success:
-            true_segment = ts_data[len(ts_data_split) : len(ts_data_split) + len(predicted)]
-            min_len = min(len(true_segment), len(predicted))
-            true_segment = true_segment[:min_len]
+            true_seg = ts_data[len(ts_data_split) : len(ts_data_split) + len(predicted)]
+            min_len = min(len(true_seg), len(predicted))
+            true_seg = true_seg[:min_len]
             predicted = predicted[:min_len]
             for a in self.analyzers:
-                analysis_result[a.AnalyzerType] = a.Analyze(true_segment, predicted)
+                analysis_result[a.AnalyzerType] = a.Analyze(true_seg, predicted)
         else:
             analysis_result["Malformed output"] = 0.0
 
@@ -98,6 +117,7 @@ class ResultRecorder:
             f.write(json.dumps(result) + "\n")
         fix_output_ownership(self.out_dir)
 
+
 # ---------------------------------------------------------------------
 class ExperimentRunner:
     def __init__(self, cfg: ExperimentConfig):
@@ -111,7 +131,11 @@ class ExperimentRunner:
     # --------------------------------------------------------------
     def run(self) -> None:
         # --- dataset ------------------------------------------------
-        dataset = build(self.cfg.dataset_name, DATASET_REGISTRY, **self.cfg.dataset_params)
+        dataset = build(
+            self.cfg.dataset_name,
+            DATASET_REGISTRY,
+            **self.cfg.dataset_params
+        )
         series_iter = list(dataset.load())
 
         for series in series_iter:
@@ -119,7 +143,7 @@ class ExperimentRunner:
             ts_data = series["series"]
             outcome = self.processor(ts_name, ts_data)
 
-            # plot ------------------------------------
+            # plot ----------------------------------------------------
             ts_plot_path = plot_series(
                 ts_name,
                 ts_data,
@@ -140,7 +164,9 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Run a time-series LLM experiment")
-    parser.add_argument("--config", required=True, help="Path to YAML config file")
+    parser.add_argument(
+        "--config", required=True, help="Path to YAML config file"
+    )
     args = parser.parse_args()
 
     cfg = load_config(args.config)
