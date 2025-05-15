@@ -1,5 +1,6 @@
 # model_name: ["distilgpt2", "smollm2-1.7b", "smollm2-135m", "llama3-8b"]
-model_name: ["llama3-8b"]
+# model_name: ["distilgpt2", "smollm2-135m"]
+model_name: ["smollm2-1.7b"]
 model_parameters:
   device: 'cpu'
   max_new_tokens: 150
@@ -11,25 +12,28 @@ dataset_params:
   dataset_names: ["AirPassengers", "MonthlyMilk", "HeartRate", "GasRateCO2", "Wooly"]
 preprocessor_name: "LLMTime"
 preprocessor_params:
-  - alpha: 0.99
-    beta: 0.3
-  - time_sep: ', '
-    prec: 3
-    alpha: 0.99
-    beta: 0.3
-  - time_sep: ' ,'
-    prec: 3
-    alpha: 0.99
-    beta: 0.3
-  - time_sep: ')('
-    prec: 3
-    alpha: 0.99
-    beta: 0.3
   - time_sep: '-'
-    prec: 3
-    alpha: 0.99
-    beta: 0.3
-instruction_string: ['Forecast the next 25 steps: ', 'Predict the next 50 steps: ', 'With the following Time Series, forecast the next 50 steps: ', 'Predict the next 50 steps given the previous steps: ']
+  - time_sep: '|'
+  - time_sep: '#'
+  - time_sep: '\n'
+  - time_sep: '/'
+  - time_sep: '_'
+  - time_sep: '->'
+  - time_sep: '::'
+  - time_sep: '...'
+  - time_sep: ' ,'
+instruction_object: [
+  { name: "CMPLT", text: "Please complete the next part of this trend based on prior information:\n{input_data}" },
+  { name: "FSEQ", text: "Forecast what comes next in this sequence:\n{input_data}" },
+  { name: "MODC", text: "Model the continuation of this pattern over the next interval:\n{input_data}" },
+  { name: "SNSR", text: "These are sensor readings from an ongoing process. Forecast the next period:\n{input_data}" },
+  { name: "NMDEXT", text: "Here is the observed trend for {ts_name}. Extend it meaningfully:\n{input_data}" },
+  { name: "FCTX", text: "Forecast from {ts_name}. Context length: {input_length}\n{input_data}" },
+  { name: "RGLR", text: "The pattern shows regularity and trend. Project it forward:\n{input_data}" },
+  { name: "INF", text: "Based on past data, infer the upcoming entries in the sequence:\n{input_data}" },
+  { name: "EST", text: "Given this sequence of observations, estimate what follows:\n{input_data}" },
+  { name: "OBSARW", text: "Observed series: {input_data} → Forecast:" },
+]
 input_data_factor: 0.8
 output_dir: 'results/LLMTIME_reproduction_instruction_seperator'
 output_jsonl: "model_responses.jsonl"

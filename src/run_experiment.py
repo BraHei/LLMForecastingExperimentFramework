@@ -58,10 +58,11 @@ class SeriesProcessor:
             instr_text = first.get("text", "")
             try:
                 formatted = instr_text.format(
-                    ts_name=ts_name,
+                    timeseries_name=ts_name,
                     input_data=data_string,
                     input_length=len(ts_data_split),
-                    total_length=len(ts_data)
+                    total_length=len(ts_data),
+                    forecast_lenght=len(ts_data) - len(ts_data_split)
                 )
             except KeyError:
                 formatted = instr_text + data_string

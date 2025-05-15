@@ -104,6 +104,73 @@ def build_metric_table(base_folder, include_instruction, include_separator):
     table.columns = pd.MultiIndex.from_tuples(table.columns)
     return table
 
+def load_baseline_mae_table() -> pd.DataFrame:
+    """
+    Load the baseline MAE table from 'darts_mae_baseline.tsv' located in the same
+    directory as this script. Returns a MultiIndex DataFrame.
+
+    Returns:
+        pd.DataFrame: Baseline MAE table with MultiIndex columns (Metric, Model).
+    """
+    import inspect
+    script_dir = Path(inspect.getfile(inspect.currentframe())).resolve().parent
+    file_path = script_dir / "darts_mae_baseline.tsv"
+
+    if not file_path.exists():
+        raise FileNotFoundError(f"Baseline MAE file not found at: {file_path}")
+
+    df = pd.read_csv(file_path, sep="\t", header=[0, 1], index_col=0)
+    return df
+
+
+def compute_relative_mae_table(metric_df: pd.DataFrame, output_dir: Path):
+    """
+    Compute the MAE table normalized by the NaiveSeasonal baseline from the darts_mae_baseline file.
+    Adds a 'Relative Average' row and saves the result.
+
+    Args:
+        metric_df (pd.DataFrame): MultiIndex DataFrame with (Model, Metric) columns.
+        output_dir (Path): Where to save the output TSV file.
+    """
+def compute_relative_mae_table(metric_df: pd.DataFrame, output_dir: Path):
+    """
+    Compute the MAE table normalized by the NaiveSeasonal baseline from the darts_mae_baseline file.
+    Automatically filters for MAE columns across any MultiIndex column depth and preserves full structure.
+
+    Args:
+        metric_df (pd.DataFrame): MultiIndex DataFrame with (Model, Metric, ...) columns.
+        output_dir (Path): Where to save the output TSV file.
+    """
+    try:
+        # Load seasonal MAE from baseline
+        baseline_df = load_baseline_mae_table()
+        if not isinstance(baseline_df.columns, pd.MultiIndex):
+            raise ValueError("Expected MultiIndex columns in baseline.")
+
+        seasonal_mae = baseline_df[("NaiveSeasonal", "MAE")]
+
+        # Drop all non-MAE columns from metric_df (assuming 'MAE' is always at level 1)
+        mae_only = metric_df.loc[:, metric_df.columns.get_level_values(1) == "MAE"]
+
+        # Normalize all MAE values by seasonal MAE
+        relative_df = mae_only.div(seasonal_mae, axis=0)
+
+        # Add a relative average row
+        relative_df.loc["Relative Average"] = relative_df.mean()
+
+        # Round for clean output
+        relative_df = relative_df.round(2)
+
+        # Save
+        rmae_file = output_dir / "relative_mae_summary.tsv"
+        relative_df.to_csv(rmae_file, sep="\t")
+
+        print(f"\nSaved relative MAE table to {rmae_file.resolve()}")
+        print("\nRelative MAE Table:\n", relative_df)
+
+    except Exception as e:
+        print(f"ERROR while computing relative MAE: {e}")
+
 def plot_predictions_across_models(base_folder, output_folder):
     base_path = Path(base_folder)
     output_dir = Path(output_folder)
@@ -209,6 +276,11 @@ def main():
         help="Include the Separator dimension in the summary"
     )
 
+    parser.add_argument(
+        "--rMAE", action="store_true",
+        help="Compute relative MAE normalized by SeasonalNaive per dataset and output table with Relative Average row"
+    )
+
     args = parser.parse_args()
 
     out_dir = Path(args.output_folder) if args.output_folder else Path(args.input_folder)
@@ -226,6 +298,10 @@ def main():
     metric_file = out_dir / "metric_summary.tsv"
     metric_df.to_csv(metric_file, sep="\t")
     print(f"Saved metric summary to {metric_file.resolve()}")
+
+    if args.rMAE:
+        print("\nComputing relative MAE table (normalized by SeasonalNaive)...")
+        compute_relative_mae_table(metric_df, out_dir)
 
     # Either process instr+sep or plot
     if args.instruction or args.separator:
