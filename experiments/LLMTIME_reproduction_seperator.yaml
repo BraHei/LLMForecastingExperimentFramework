@@ -1,4 +1,4 @@
-model_name: ["distilgpt2", "smollm2-135m"]
+model_name: ["distilgpt2-88m", "smollm2-135m"]
 model_parameters:
   device: 'cpu'
   max_new_tokens: 150
