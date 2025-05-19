@@ -102,7 +102,7 @@ class LMWrapper:
             return ""
 
 MODEL_REGISTRY = {
-    "distilgpt2": lambda **kwargs: LMWrapper(checkpoint="distilbert/distilgpt2", **kwargs),
+    "distilgpt2-88m": lambda **kwargs: LMWrapper(checkpoint="distilbert/distilgpt2", **kwargs),
     "llama3-8b-instruct": lambda **kwargs: LMWrapper(checkpoint="meta-llama/Meta-Llama-3.1-8B-Instruct", **kwargs),
     "llama3-8b": lambda **kwargs: LMWrapper(checkpoint="meta-llama/Meta-Llama-3.1-8B", **kwargs),
     "smollm2-1.7b-instruct": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM2-1.7B-Instruct", **kwargs),

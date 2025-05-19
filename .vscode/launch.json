@@ -46,7 +46,7 @@
             "args": [
                 "--input_folder",
                 "results/Darts_baseline",
-                "--rMAE"
+                "--relative"
             ],
             "console": "integratedTerminal",
             "justMyCode": false,
