@@ -1,5 +1,3 @@
-# model_name: ["distilgpt2-88m", "smollm2-1.7b", "smollm2-135m", "llama3-8b"]
-# model_name: ["smollm2-1.7b"]
 model_name: ["distilgpt2-88m", "smollm2-135m"]
 model_parameters:
   device: 'cpu'

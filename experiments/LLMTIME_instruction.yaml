@@ -43,6 +43,6 @@ instruction_object: [
   { name: "DSINFO", text: "You are provided with the first {input_length} entries from a dataset of length {total_length}.\nPredict what comes next:\n{input_data}" }
 ]
 input_data_factor: 0.8
-output_dir: 'results/LLMTIME_reproduction_instruction'
+output_dir: 'results/LLMTIME_instruction'
 output_jsonl: "model_responses.jsonl"
 data_analyzers: [MAE, MSE, MASE]

@@ -11,28 +11,52 @@ preprocessor_name: "LLMTime"
 preprocessor_params:
   - alpha: 0.99
     beta: 0.75
+    base: 10
+    prec: 3
   - alpha: 0.99
     beta: 0.5
+    base: 10
+    prec: 3
   - alpha: 0.99
     beta: 0.3
+    base: 10
+    prec: 3
   - alpha: 0.99
     beta: 0.1
+    base: 10
+    prec: 3
   - alpha: 0.75
     beta: 0.75
+    base: 10
+    prec: 3
   - alpha: 0.75
     beta: 0.5
+    base: 10
+    prec: 3
   - alpha: 0.75
     beta: 0.3
+    base: 10
+    prec: 3
   - alpha: 0.75
     beta: 0.1
+    base: 10
+    prec: 3
   - alpha: 0.5
     beta: 0.75
+    base: 10
+    prec: 3
   - alpha: 0.5
     beta: 0.5
+    base: 10
+    prec: 3
   - alpha: 0.5
     beta: 0.3
+    base: 10
+    prec: 3
   - alpha: 0.5
     beta: 0.1
+    base: 10
+    prec: 3
   
   - alpha: 0.99
     beta: 0.75
@@ -84,6 +108,6 @@ preprocessor_params:
     prec: 2
 
 input_data_factor: 0.8
-output_dir: 'results/LLMTIME_rep_parameters'
+output_dir: 'results/LLMTIME_parameters'
 output_jsonl: "model_responses.jsonl"
 data_analyzers: [MAE, MSE, MASE]
