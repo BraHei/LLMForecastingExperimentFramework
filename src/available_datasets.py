@@ -73,6 +73,25 @@ DARTS_DATASET_CLASSES = {
     "ETTm2": ETTm2Dataset,
 }
 
+DARTS_DATASET_SEASONALITY = {
+    "AirPassengers": 12,
+    "AusBeer": 4,
+    "Energy": 24,
+    "HeartRate": 1,
+    "IceCreamHeater": 12,
+    "MonthlyMilk": 12,
+    "Sunspots": 132,  # 11-year solar cycle, monthly data
+    "Temperature": 12,
+    "AustralianTourism": 12,
+    "Weather": 24,  # 10 minutes to day = 144
+    "Wooly": 12,
+    "GasRateCO2": 1, #unknown
+    "ETTh1": 24,
+    "ETTh2": 24,
+    "ETTm1": 96,
+    "ETTm2": 96,
+}
+
 class DartsDataset(BaseDataset):
     def __init__(self, dataset_names: List[str]):
         if isinstance(dataset_names, str):
@@ -110,7 +129,8 @@ class DartsDataset(BaseDataset):
                             "component": component,
                             "start": str(univariate_ts.start_time()) if univariate_ts.has_datetime_index else None,
                             "freq": univariate_ts.freq_str if univariate_ts.has_datetime_index else None,
-                            "length": len(univariate_ts)
+                            "length": len(univariate_ts),
+                            "seasonality": DARTS_DATASET_SEASONALITY.get(name, 1)
                         }
                     })
             else:
