@@ -9,8 +9,7 @@ dataset_params:
   dataset_names: ["AirPassengers", "MonthlyMilk", "HeartRate", "GasRateCO2", "Wooly"]
 preprocessor_name: "LLMABBA"
 preprocessor_params: {}
-instruction_string: 'With the following Time Series, forecast the next 50 steps: '
 input_data_factor: 0.8
 output_dir: 'results/LLMABBA_LLMTime_reproduction'
 output_jsonl: "model_responses.jsonl"
-data_analyzers: [MAE, MSE, RMSE]
+data_analyzers: [MAE, MSE, MASE]

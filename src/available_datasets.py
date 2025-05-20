@@ -143,7 +143,8 @@ class DartsDataset(BaseDataset):
                         "component": data.components[0],
                         "start": str(data.start_time()) if data.has_datetime_index else None,
                         "freq": data.freq_str if data.has_datetime_index else None,
-                        "length": len(data)
+                        "length": len(data),
+                        "seasonality": DARTS_DATASET_SEASONALITY.get(name, 1)
                     }
                 })
         return series_dicts
@@ -218,7 +219,8 @@ class KernelSynthDataset(BaseDataset):
                         "num_series": self.num_series,
                         "max_kernels": self.max_kernels,
                         "sequence_length": self.sequence_lenght,
-                    }
+                    },
+                    "seasonality": 1
                 }
             }
             for idx, item in enumerate(raw_data)

@@ -45,11 +45,14 @@ class MeanAbsoluteScaledError(BaseDataAnalyzer):
         super().__init__()
         self.AnalyzerType = "MeanAbsoluteScaledError"
 
+    #https://github.com/ServiceNow/N-BEATS/blob/c746a4f13ffc957487e0c3279b182c3030836053/common/metrics.py#L24
     def Analyze(self, true, predict, training=None, seasonality=1):
         if (seasonality != 1):
             self.AnalyzerType = "seasonalMeanAbsoluteScaledError"
-        
-        #https://github.com/ServiceNow/N-BEATS/blob/c746a4f13ffc957487e0c3279b182c3030836053/common/metrics.py#L24
+
+        if training is None:
+            print("WARNING: inserted data does not contain trianing data required for MASE, skipping.")
+            return float("nan")
         
         # Convert inputs to numpy arrays
         true = np.array(true)

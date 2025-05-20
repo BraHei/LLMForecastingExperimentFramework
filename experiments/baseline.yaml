@@ -8,4 +8,4 @@ preprocessor_params: {}
 input_data_factor: 0.8
 output_dir: 'results/Darts_baseline'
 output_jsonl: "model_responses.jsonl"
-data_analyzers: [MAE, MSE, RMSE]
+data_analyzers: [MAE, MSE, MASE]
