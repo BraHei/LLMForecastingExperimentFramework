@@ -42,7 +42,7 @@
             "name": "Create Plots",
             "type": "debugpy",
             "request": "launch",
-            "module": "experiments.create_tables_and_plots",
+            "module": "src.create_tables_and_plots",
             "args": [
                 "--input_folder",
                 "results/Darts_baseline",
