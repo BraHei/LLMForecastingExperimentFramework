@@ -86,7 +86,7 @@ class LMWrapper:
                     temperature=self.temperature,
                     top_p=self.top_p,
                     do_sample=self.do_sample,
-                    repetition_penalty = self.repetition_penalty
+                    repetition_penalty = self.repetition_penalty,
                     )
             
             predictions = self.tokenizer.batch_decode(

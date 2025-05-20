@@ -171,4 +171,4 @@ if __name__ == "__main__":
     cfg.save()
 
     recorder = ResultRecorder(Path(cfg.output_dir), "")
-    recorder.record_results_to_table(ExperimentRunner(cfg).run())
+    recorder.record_results_to_table(ExperimentRunner(cfg).run(), cfg)
