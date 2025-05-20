@@ -137,12 +137,11 @@ class ExperimentRunner:
         results = []
         for series in series_iter:
 
-            outcome = self.processor(ts_name, ts_data)
+            outcome = self.processor(series)
 
             # plot ----------------------------------------------------
             ts_plot_path = plot_series(
-                ts_name,
-                ts_data,
+                series,
                 outcome["data"]["reconstructed_split"],
                 outcome["data"]["predicted"],
                 outcome["inverse_success"],

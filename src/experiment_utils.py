@@ -74,8 +74,11 @@ def inverse_transform_safe(encoder, encoded_str):
         return None, False
 
 
-def plot_series(idx, original, reconstruction, prediction, success, output_folder, prediction_offset=None):
+def plot_series(series, reconstruction, prediction, success, output_folder, prediction_offset=None):
     plt.style.use('default')  # Use default matplotlib style
+
+    idx = series["metadata"]["dataset_name"]
+    original = series["series"]
 
     if prediction_offset is None:
         prediction_offset = len(original)

@@ -15,7 +15,7 @@ class MeanAbsoluteErrorAnalyzer(BaseDataAnalyzer):
         super().__init__()
         self.AnalyzerType = "MeanAbsoluteError"
 
-    def Analyze(self, true, predict):
+    def Analyze(self, true, predict, training = None, seasonality = None):
         true = np.array(true)
         predict = np.array(predict)
         return np.mean(np.abs(true - predict))
@@ -45,7 +45,7 @@ class MeanAbsoluteScaledError(BaseDataAnalyzer):
         super().__init__()
         self.AnalyzerType = "MeanAbsoluteScaledError"
 
-    def Analyze(self, true, predict, training, seasonality):
+    def Analyze(self, true, predict, training=None, seasonality=1):
         if (seasonality != 1):
             self.AnalyzerType = "seasonalMeanAbsoluteScaledError"
         
@@ -72,5 +72,5 @@ DATA_ANALYZER_REGISTRY = {
     "MAE": MeanAbsoluteErrorAnalyzer,
     "MSE": MeanSquareErrorAnalyzer,
     "RMSE": RootMeanSquareErrorAnalyzer,
-    "MASE": RootMeanSquareErrorAnalyzer,
+    "MASE": MeanAbsoluteScaledError,
 }
