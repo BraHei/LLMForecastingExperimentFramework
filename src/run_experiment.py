@@ -15,7 +15,7 @@ from src.experiment_utils import (
     split_data,
     ResultRecorder
 )
-from src.available_datasets import DATASET_REGISTRY
+from src.available_datasets import DATASET_REGISTRY, BaseDataset
 from src.preprocessor import PREPROCESSOR_REGISTRY
 from src.lmwrapper import MODEL_REGISTRY
 from src.data_analyzers import DATA_ANALYZER_REGISTRY
@@ -40,7 +40,12 @@ class SeriesProcessor:
         self.analyzers = [build(name, DATA_ANALYZER_REGISTRY) for name in cfg.data_analyzers]
 
     # --------------------------------------------------------------
-    def __call__(self, ts_name: str, ts_data: List[float]) -> dict:
+    def __call__(self, series : BaseDataset) -> dict:
+        
+        ts_name = series["metadata"]["dataset_name"]
+        ts_data = series["series"]
+        ts_seasonality = series["metadata"].get("seasonality", None)
+
         # --- split data ---------------------------------------------
         if self.cfg.input_data_length is not None:
             ts_data_split = ts_data[: self.cfg.input_data_length]
@@ -85,7 +90,11 @@ class SeriesProcessor:
             true_seg = true_seg[:min_len]
             predicted = predicted[:min_len]
             for a in self.analyzers:
-                analysis_result[a.AnalyzerType] = a.Analyze(true_seg, predicted)
+                if ts_seasonality:
+                    analysis = a.Analyze(true_seg, predicted, ts_data_split, ts_seasonality)
+                    analysis_result[a.AnalyzerType] = analysis
+                else:
+                    analysis_result[a.AnalyzerType] = a.Analyze(true_seg, predicted)
         else:
             analysis_result["Malformed output"] = 0.0
 
@@ -127,8 +136,7 @@ class ExperimentRunner:
         series_iter = list(dataset.load())
         results = []
         for series in series_iter:
-            ts_name = series["metadata"]["dataset_name"]
-            ts_data = series["series"]
+
             outcome = self.processor(ts_name, ts_data)
 
             # plot ----------------------------------------------------
