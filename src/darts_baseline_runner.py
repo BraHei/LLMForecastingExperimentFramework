@@ -18,7 +18,7 @@ from src.experiment_utils import (
     build,
     ResultRecorder
 )
-from src.available_datasets import DATASET_REGISTRY
+from src.available_datasets import DATASET_REGISTRY, BaseDataset
 from src.data_analyzers import DATA_ANALYZER_REGISTRY
 
 from darts import TimeSeries
@@ -47,7 +47,11 @@ class DartsSeriesProcessor:
         self.model_builder = get_dynamic_baseline(self.model_name)
         self.analyzers = [build(name, DATA_ANALYZER_REGISTRY) for name in cfg.data_analyzers]
 
-    def __call__(self, ts_name: str, ts_data: List[float]) -> dict:
+    def __call__(self, series: BaseDataset) -> dict:
+        ts_name = series["metadata"]["dataset_name"]
+        ts_data = series["series"]
+        ts_seasonality = series["metadata"].get("seasonality", None)
+
         # --- split data ----------------------------------------------
         if (self.cfg.input_data_length is not None):
             ts_data_split = ts_data[:self.cfg.input_data_length]
@@ -69,11 +73,14 @@ class DartsSeriesProcessor:
         min_len = min(len(predicted_vals), len(true_vals))
         predicted_vals = predicted_vals[:min_len]
         true_vals = true_vals[:min_len]
-
-        metrics = {
-            analyzer.AnalyzerType: analyzer.Analyze(true_vals, predicted_vals)
-            for analyzer in self.analyzers
-        }
+        
+        analysis_result: dict = {}
+        for a in self.analyzers:
+            if ts_seasonality:
+                analysis = a.Analyze(true_vals, predicted_vals, ts_data_split, ts_seasonality)
+                analysis_result[a.AnalyzerType] = analysis
+            else:
+                analysis_result[a.AnalyzerType] = a.Analyze(true_vals, predicted_vals)
 
         return {
             "id": f"{ts_name}",
@@ -87,7 +94,7 @@ class DartsSeriesProcessor:
             "model": {
                 "model_name": self.model_name,
             },
-            "metrics": metrics,
+            "metrics": analysis_result,
         }
 
 class BaselineExperimentRunner:
@@ -105,15 +112,11 @@ class BaselineExperimentRunner:
         results = []
 
         for series in series_list:
-            ts_name = series["metadata"]["dataset_name"]
-            ts_data = series["series"]
-
-            outcome = processor(ts_name, ts_data)
+            outcome = processor(series)
 
             plot_path = plot_series(
-                outcome["id"],
-                outcome["data"]["original"],
-                outcome["data"]["reconstructed_split"],
+                series,
+                [],
                 outcome["data"]["predicted"],
                 outcome["inverse_success"],
                 str(self.out_dir),

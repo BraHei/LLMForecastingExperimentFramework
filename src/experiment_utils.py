@@ -92,7 +92,8 @@ def plot_series(series, reconstruction, prediction, success, output_folder, pred
     # Create figure and plot
     plt.figure(figsize=(10, 4))
     plt.plot(range(len(original)), original, label="Original")
-    plt.plot(range(len(reconstruction)), reconstruction, label="Reconstruction")
+    if (len(reconstruction) > 0):
+        plt.plot(range(len(reconstruction)), reconstruction, label="Reconstruction")
 
     if success and prediction is not None:
         pred_end = prediction_offset + len(prediction)
