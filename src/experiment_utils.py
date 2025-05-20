@@ -5,7 +5,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from pathlib import Path
 
+import pandas as pd
+
 from typing import TypeVar, Type
+
+from src.config import ExperimentConfig
 
 T = TypeVar('T')
 
@@ -126,3 +130,56 @@ def fix_output_ownership(folder: Path):
         os.chown(folder, uid, gid)
     except Exception as e:
         print(f"[Warning] Ownership fix failed: {e}")
+
+# ---------------------------------------------------------------------
+class ResultRecorder:
+    def __init__(self, out_dir: Path, jsonl_file: str):
+        self.out_dir = out_dir
+        self.jsonl_path = self.out_dir / jsonl_file
+        self.out_dir.mkdir(parents=True, exist_ok=True)
+
+    def flatten_config(self, cfg: ExperimentConfig):
+        """Flatten relevant config fields for result table."""
+        flat = {}
+        # Add core fields (customize for your needs)
+        flat["experiment_name"] = cfg.experiment_name
+        flat["model_name"] = cfg.model_name
+        flat["preprocessor_name"] = cfg.preprocessor_name
+        flat["dataset_name"] = cfg.dataset_name
+        flat["instruction_name"] = cfg.instruction_object[0]['name'] if cfg.instruction_object else None
+        flat["instruction_text"] = cfg.instruction_object[0]['text'] if cfg.instruction_object else None
+        flat["input_data_length"] = cfg.input_data_length
+        flat["input_data_factor"] = cfg.input_data_factor
+        flat.update(cfg.preprocessor_params)
+        flat.update(cfg.model_parameters)
+
+        return flat
+
+    def record_results_to_table(self, results: list, cfg: ExperimentConfig, output_file="master_results.tsv"):
+        rows = []
+        meta = self.flatten_config(cfg)
+        for entry in results:
+            # For each metric in the result
+            for metric_name, metric_value in entry['metrics'].items():
+                row = {
+                    **meta,
+                    "series_id": entry['id'],
+                    "metric_name": metric_name,
+                    "metric_value": metric_value
+                }
+                rows.append(row)
+
+        # Append to or create the CSV
+        df = pd.DataFrame(rows)
+        output_file = self.out_dir / output_file
+        if Path(output_file).exists():
+            df.to_csv(output_file, sep="\t", mode="a", index=False, header=False)
+        else:
+            df.to_csv(output_file, sep="\t", mode="w", index=False, header=True)
+        
+        fix_output_ownership(self.out_dir)
+
+    def record_jsonl(self, result: dict) -> None:
+        with open(self.jsonl_path, "a") as f:
+            f.write(json.dumps(result) + "\n")
+        fix_output_ownership(self.out_dir)

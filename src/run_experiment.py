@@ -12,7 +12,8 @@ from src.experiment_utils import (
     safe_to_list,
     build,
     inverse_transform_safe,
-    split_data
+    split_data,
+    ResultRecorder
 )
 from src.available_datasets import DATASET_REGISTRY
 from src.preprocessor import PREPROCESSOR_REGISTRY
@@ -105,20 +106,6 @@ class SeriesProcessor:
             "metrics": analysis_result,
         }
 
-
-# ---------------------------------------------------------------------
-class ResultRecorder:
-    def __init__(self, out_dir: Path, jsonl_file: str):
-        self.out_dir = out_dir
-        self.jsonl_path = self.out_dir / jsonl_file
-        self.out_dir.mkdir(parents=True, exist_ok=True)
-
-    def record_jsonl(self, result: dict) -> None:
-        with open(self.jsonl_path, "a") as f:
-            f.write(json.dumps(result) + "\n")
-        fix_output_ownership(self.out_dir)
-
-
 # ---------------------------------------------------------------------
 class ExperimentRunner:
     def __init__(self, cfg: ExperimentConfig):
@@ -130,7 +117,7 @@ class ExperimentRunner:
         self.recorder = ResultRecorder(self.out_dir, self.jsonl_filename)
 
     # --------------------------------------------------------------
-    def run(self) -> None:
+    def run(self) -> List:
         # --- dataset ------------------------------------------------
         dataset = build(
             self.cfg.dataset_name,
@@ -138,7 +125,7 @@ class ExperimentRunner:
             **self.cfg.dataset_params
         )
         series_iter = list(dataset.load())
-
+        results = []
         for series in series_iter:
             ts_name = series["metadata"]["dataset_name"]
             ts_data = series["series"]
@@ -156,8 +143,11 @@ class ExperimentRunner:
             )
             outcome["plot_path"] = ts_plot_path
             self.recorder.record_jsonl(outcome)
+            results.append(outcome)
 
+        fix_output_ownership(self.out_dir)
         print(f"Experiment '{self.name}' finished. Results in {self.out_dir}")
+        return results
 
 
 # ---------------------------------------------------------------------
@@ -172,4 +162,6 @@ if __name__ == "__main__":
 
     cfg = load_config(args.config)
     cfg.save()
-    ExperimentRunner(cfg).run()
+
+    recorder = ResultRecorder(Path(cfg.output_dir), "")
+    recorder.record_results_to_table(ExperimentRunner(cfg).run())

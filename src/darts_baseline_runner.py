@@ -9,12 +9,14 @@ from copy import deepcopy
 import numpy as np
 
 from src.config import ExperimentConfig, load_config
+from src.run_experiment import ResultRecorder
 from src.experiment_utils import (
     fix_output_ownership,
     plot_series,
     safe_to_list,
     split_data,
-    build
+    build,
+    ResultRecorder
 )
 from src.available_datasets import DATASET_REGISTRY
 from src.data_analyzers import DATA_ANALYZER_REGISTRY
@@ -33,7 +35,7 @@ def get_dynamic_baseline(model_name: str):
     elif model_name == "NaiveDrift":
         return lambda series_length, **kwargs: NaiveDrift(**kwargs)
     else:
-        raise ValueError(f"Unsupported model: {model_name}")
+        raise ValueError(f"Unsupported model: {model_name}, did you want to use --multirun?")
 
 
 class DartsSeriesProcessor:
@@ -88,19 +90,6 @@ class DartsSeriesProcessor:
             "metrics": metrics,
         }
 
-
-class ResultRecorder:
-    def __init__(self, out_dir: Path, jsonl_file: str):
-        self.out_dir = out_dir
-        self.jsonl_path = self.out_dir / jsonl_file
-        self.out_dir.mkdir(parents=True, exist_ok=True)
-
-    def record_jsonl(self, result: dict) -> None:
-        with open(self.jsonl_path, "a") as f:
-            f.write(json.dumps(result) + "\n")
-        fix_output_ownership(self.out_dir)
-
-
 class BaselineExperimentRunner:
     def __init__(self, cfg: ExperimentConfig):
         self.cfg = cfg
@@ -108,11 +97,12 @@ class BaselineExperimentRunner:
         self.jsonl_filename = cfg.extra.get("output_jsonl", "results.jsonl")
         self.recorder = ResultRecorder(self.out_dir, self.jsonl_filename)
 
-    def run(self):
+    def run(self) -> List:
         dataset = build(self.cfg.dataset_name, DATASET_REGISTRY, **self.cfg.dataset_params)
         series_list = list(dataset.load())
 
         processor = DartsSeriesProcessor(cfg=self.cfg)
+        results = []
 
         for series in series_list:
             ts_name = series["metadata"]["dataset_name"]
@@ -131,12 +121,17 @@ class BaselineExperimentRunner:
             )
             outcome["plot_path"] = plot_path
             self.recorder.record_jsonl(outcome)
+            results.append(outcome)
 
+        fix_output_ownership(self.out_dir)
         print(f"All baselines completed. Results saved in {self.out_dir}")
+        return results
 
 def run_multirun(cfg_path: str | Path):
     """Run Darts baseline experiments for each model individually, with separate output dirs."""
     base_cfg = load_config(cfg_path, build_experiment_name_flag=False)
+
+    recorder = ResultRecorder(Path(base_cfg.output_dir), base_cfg.extra.get("output_jsonl", "results.jsonl"))
 
     for model_name in base_cfg.model_name:
         sub_cfg = deepcopy(base_cfg)
@@ -148,10 +143,13 @@ def run_multirun(cfg_path: str | Path):
         sub_cfg.save()
 
         runner = BaselineExperimentRunner(sub_cfg)
-        runner.run()
-
+        
+        # We record a master file with relevant information for later extraction
+        recorder.record_results_to_table(runner.run(), sub_cfg)
         import gc
         gc.collect()
+
+    fix_output_ownership(Path(base_cfg.output_dir))
 
 if __name__ == "__main__":
     import argparse
@@ -166,4 +164,9 @@ if __name__ == "__main__":
     else:
         cfg = load_config(args.config)
         cfg.save()
-        BaselineExperimentRunner(cfg).run()
+
+        recorder = ResultRecorder(Path(cfg.output_dir), "")
+        recorder.record_results_to_table(BaselineExperimentRunner(cfg).run())
+
+
+    
