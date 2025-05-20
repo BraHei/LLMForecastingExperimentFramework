@@ -88,7 +88,6 @@ class DartsDataset(BaseDataset):
             )
 
     def load(self):
-        from darts import TimeSeries
 
         series_dicts = []
 
