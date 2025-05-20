@@ -57,7 +57,7 @@ def run_grid(cfg_path: str | Path):
         torch.cuda.empty_cache()
         gc.collect()
 
-    fix_output_ownership(base_cfg.out_dir)
+    fix_output_ownership(Path(base_cfg.output_dir))
 
 def main():
     parser = argparse.ArgumentParser(
