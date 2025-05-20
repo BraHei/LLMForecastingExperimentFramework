@@ -83,54 +83,6 @@ preprocessor_params:
     base: 10
     prec: 2
 
-  - alpha: 0.99
-    beta: 0.75
-    base: 16
-    prec: 3
-  - alpha: 0.99
-    beta: 0.5
-    base: 16
-    prec: 3
-  - alpha: 0.99
-    beta: 0.3
-    base: 16
-    prec: 3
-  - alpha: 0.99
-    beta: 0.1
-    base: 16
-    prec: 3
-  - alpha: 0.75
-    beta: 0.75
-    base: 16
-    prec: 3
-  - alpha: 0.75
-    beta: 0.5
-    base: 16
-    prec: 3
-  - alpha: 0.75
-    beta: 0.3
-    base: 16
-    prec: 3
-  - alpha: 0.75
-    beta: 0.1
-    base: 16
-    prec: 3
-  - alpha: 0.5
-    beta: 0.75
-    base: 16
-    prec: 3
-  - alpha: 0.5
-    beta: 0.5
-    base: 16
-    prec: 3
-  - alpha: 0.5
-    beta: 0.3
-    base: 16
-    prec: 3
-  - alpha: 0.5
-    beta: 0.1   
-    base: 16
-    prec: 3
 input_data_factor: 0.8
 output_dir: 'results/LLMTIME_rep_parameters'
 output_jsonl: "model_responses.jsonl"
