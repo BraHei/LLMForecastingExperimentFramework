@@ -1,41 +1,48 @@
-model_name: ["distilgpt2-88m", "smollm2-135m"]
+model_name_grid:
+  - distilgpt2-88m
+  - smollm2-135m
+
 model_parameters:
   device: 'cpu'
   max_new_tokens: 150
   temperature: 1.0
   top_p: 0.9
   do_sample: true
+
 dataset_name: "darts"
 dataset_params:
   dataset_names: ["AirPassengers", "MonthlyMilk", "HeartRate", "GasRateCO2", "Wooly"]
+
 preprocessor_name: "LLMTime"
-preprocessor_params:
-preprocessor_params:
-  - time_sep: ','
-  - time_sep: ', '
-  - time_sep: ' ,'
-  - time_sep: ')('
-  - time_sep: '-'
-  - time_sep: ' , '
-  - time_sep: '|'
-  - time_sep: ' | '
-  - time_sep: '/'
-  - time_sep: ' / '
-  - time_sep: '\\'
-  - time_sep: '_'
-  - time_sep: '...'
-  - time_sep: ' ) ( '
-  - time_sep: ']['
-  - time_sep: '}{'
-  - time_sep: '~'
-  - time_sep: '^'
-  - time_sep: '#'
-  - time_sep: '@'
-  - time_sep: '::'
-  - time_sep: '=>'
-  - time_sep: '->'
-  - time_sep: '\n'
-  - time_sep: '\t'
+
+preprocessor_params_grid:
+  time_sep:
+    - ','
+    - ', '
+    - ' ,'
+    - ')('
+    - '-'
+    - ' , '
+    - '|'
+    - ' | '
+    - '/'
+    - ' / '
+    - '\\'
+    - '_'
+    - '...'
+    - ' ) ( '
+    - ']['
+    - '}{'
+    - '~'
+    - '^'
+    - '#'
+    - '@'
+    - '::'
+    - '=>'
+    - '->'
+    - '\n'
+    - '\t'
+
 input_data_factor: 0.8
 output_dir: 'results/LLMTIME_seperator'
 output_jsonl: "model_responses.jsonl"

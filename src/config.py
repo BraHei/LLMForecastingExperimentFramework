@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 import time
 
+
 @dataclass(slots=True)
 class ExperimentConfig:
     """Typed representation of the YAML configuration.
@@ -13,10 +14,10 @@ class ExperimentConfig:
     Unknown YAML keys are kept in `extra` for forward compatibility.
     """
 
-    # --- mandatory ------------------------------------------------------
-    preprocessor_name: str
-    model_name: Any
-    dataset_name: str
+    # --- Non grid ------------------------------------------------------
+    preprocessor_name: Optional[str] = None
+    model_name: Optional[Any] = None
+    dataset_name: Optional[str] = None
 
     # --- optional / nested dicts ---------------------------------------
     preprocessor_params: Dict[str, Any] = field(default_factory=dict)
@@ -26,6 +27,14 @@ class ExperimentConfig:
     input_data_factor: Optional[Any] = None
     # instruction_object is optional; can be a single dict or list of dicts
     instruction_object: Optional[List[Dict[str, Any]]] = None
+    
+    # --- girds ----------------------------------------------------------
+    model_name_grid: Optional[List[Any]] = None
+    preprocessor_params_grid: Optional[Dict[str, List[Any]]] = None
+    model_parameters_grid: Optional[List[Dict[str, Any]]] = None
+    instruction_object_grid: Optional[List[Any]] = None
+    input_data_factor_grid: Optional[List[Any]] = None
+
 
     # --- misc -----------------------------------------------------------
     data_analyzers: List[str] = field(default_factory=lambda: ["basic"])
@@ -73,11 +82,28 @@ class ExperimentConfig:
         return cfg
 
     def __post_init__(self):
-        # exactly one of length or factor must be set
-        if (self.input_data_length is None) == (self.input_data_factor is None):
+        input_length_ok = (self.input_data_length is not None) or hasattr(self, 'input_data_length_grid')
+        input_factor_ok = (self.input_data_factor is not None) or hasattr(self, 'input_data_factor_grid')
+        if input_length_ok == input_factor_ok:
             raise ValueError(
-                "Exactly one of 'input_data_length' or 'input_data_factor' must be set."
+                "Exactly one of 'input_data_length' or 'input_data_factor' (or their _grid variants) must be set."
             )
+        
+        # For each mandatory field, check that either the single value or grid is present
+        mandatory = [
+            ("preprocessor_name", "preprocessor_name_grid"),
+            ("model_name", "model_name_grid"),
+            ("dataset_name", "dataset_name_grid"),
+        ]
+        missing = []
+        for single, grid in mandatory:
+            if getattr(self, single, None) is None and getattr(self, grid, None) is None:
+                missing.append(single)
+        if missing:
+            raise ValueError(
+                f"Missing required field(s): {', '.join(missing)} (need either the field or its _grid variant)"
+            )
+
         if self.build_experiment_name_flag:
             self.experiment_name = self.build_experiment_name()
         self.output_dir = str(Path(self.output_dir) / self.experiment_name)

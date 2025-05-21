@@ -20,7 +20,7 @@
             "module": "src.multirun_experiment",
             "args": [
                 "--config",
-                "experiments/LLMTIME_rep_parameters.yaml",
+                "experiments/LLMTIME_seperator.yaml",
             ],
             "console": "integratedTerminal",
             "justMyCode": false,

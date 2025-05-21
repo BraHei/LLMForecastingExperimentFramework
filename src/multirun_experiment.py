@@ -8,51 +8,56 @@ from src.config import load_config
 from src.run_experiment import ExperimentRunner
 from typing import List, Optional
 from src.experiment_utils import ResultRecorder, fix_output_ownership
-
+from itertools import product
+from dataclasses import asdict
 
 def ensure_list(x):
+    if x is None:
+        return [None]
     return x if isinstance(x, list) else [x]
+
+def expand_param_grid(param_grid: dict):
+    """Turn {'a': [1,2], 'b': [3,4]} into [{'a':1,'b':3}, {'a':1,'b':4}, ...]"""
+    keys = list(param_grid.keys())
+    vals = [param_grid[k] for k in keys]
+    return [dict(zip(keys, v)) for v in product(*vals)]
 
 def run_grid(cfg_path: str | Path):
     base_cfg = load_config(cfg_path, build_experiment_name_flag=False)
     recorder = ResultRecorder(Path(base_cfg.output_dir), base_cfg.extra.get("output_jsonl", "results.jsonl"))
 
-    # pre‐compute instruction‐object sweep options:
-    if base_cfg.instruction_object is None:
-        instr_opts: list[Optional[List[dict]]] = [None]
-    else:
-        # each run gets a list containing exactly one instruction dict
-        instr_opts = [[inst] for inst in base_cfg.instruction_object]
+    # --- Build sweep_axes from *_grid fields ---
+    sweep_axes = {}
+    base_dict = asdict(base_cfg) | base_cfg.extra  # merge base_cfg and extra
 
-    sweep_axes = {
-        "preprocessor_params": ensure_list(base_cfg.preprocessor_params),
-        "model_name":          ensure_list(base_cfg.model_name),
-        "model_parameters":    ensure_list(base_cfg.model_parameters),
-        "instruction_object":  instr_opts,
-        "input_data_factor":   ensure_list(base_cfg.input_data_factor),
-    }
+    for k, v in base_dict.items():
+        if k.endswith("_grid"):
+            base_key = k[:-5]  # Remove '_grid'
+            if base_key == "preprocessor_params":
+                # expand dict grid
+                sweep_axes[base_key] = expand_param_grid(v)
+            else:
+                sweep_axes[base_key] = ensure_list(v)
 
-    # now flip the flag on so that __post_init__ will build a new name per sub‐cfg
+    # For all standard fields not in sweep_axes, add as singleton
+    for key in ["model_name", "model_parameters", "preprocessor_params", "instruction_object", "input_data_factor"]:
+        if key not in sweep_axes:
+            sweep_axes[key] = ensure_list(getattr(base_cfg, key, None))
+
+    # Always: flip flag on for naming
     base_cfg.build_experiment_name_flag = True
 
+    # --- Sweep over product of axes ---
     for run_idx, values in enumerate(product(*sweep_axes.values()), start=1):
         sub_cfg = deepcopy(base_cfg)
-        # assign each axis value to the config
         for key, val in zip(sweep_axes.keys(), values):
-            setattr(sub_cfg, key, val)
-
-        # regenerate name & output_dir
+            if val is not None:
+                setattr(sub_cfg, key, val)
         sub_cfg.__post_init__()
         print(f"[{run_idx}] → {sub_cfg.output_dir}")
-
-        # save a copy of the yaml & run
         sub_cfg.save()
         runner = ExperimentRunner(sub_cfg)
-
-        # We record a master file with relevant information for later extraction
         recorder.record_results_to_table(runner.run(), sub_cfg)
-
-        # cleanup
         del runner.processor.model
         torch.cuda.empty_cache()
         gc.collect()
