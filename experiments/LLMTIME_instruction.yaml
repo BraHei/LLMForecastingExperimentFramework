@@ -10,7 +10,7 @@ model_parameters:
 
 dataset_name: "darts"
 dataset_params:
-  dataset_names: ["AirPassengers", "MonthlyMilk", "HeartRate", "GasRateCO2", "Wooly"]
+  dataset_names: ["AirPassengers", "MonthlyMilk", "IceCreamHeater", "GasRateCO2", "Wooly", "AusBeer"]
 
 preprocessor_name: "LLMTime"
 preprocessor_params:
@@ -21,32 +21,28 @@ instruction_object_grid:
   - { name: "FSEQ", text: "Forecast what comes next in this sequence:\n{input_data}" }
   - { name: "PTSV", text: "Predict the next values in this time series:\n{input_data}" }
   - { name: "CNT", text: "Continue the sequence based on previous trends:\n{input_data}" }
-  - { name: "EXT", text: "Extend this time series with plausible next steps:\n{input_data}" }
-  - { name: "EST", text: "Given this sequence of observations, estimate what follows:\n{input_data}" }
-  - { name: "TRND", text: "Use the trend in the series to predict upcoming values:\n{input_data}" }
-  - { name: "MODC", text: "Model the continuation of this pattern over the next interval:\n{input_data}" }
   - { name: "INF", text: "Based on past data, infer the upcoming entries in the sequence:\n{input_data}" }
+
+  - { name: "PHYSP", text: "This data represents a physical process over time. Predict the next steps:\n{input_data}" }
+  - { name: "SNSR", text: "These are sensor readings from an ongoing process. Forecast the next period:\n{input_data}" }
+
+  - { name: "PERD", text: "Measurements have been recorded periodically. What comes next?\n{input_data}" }
+  - { name: "IFTRND", text: "If this trend continues, what values appear next?\n{input_data}" }
+  - { name: "LOGX", text: "What is the logical extension of this sequence?\n{input_data}" }
+  - { name: "EVLV", text: "How does this sequence evolve over time?\n{input_data}" }
+
+  - { name: "TASK", text: "Your task is to continue this time series with realistic values:\n{input_data}" }
+  - { name: "ANLZ", text: "You are analyzing a time-dependent process. Predict what happens next:\n{input_data}" }
+
   - { name: "OBSARW", text: "Observed series: {input_data} → Forecast:" }
   - { name: "ITSP", text: "Input time series:\n{input_data}\n\nPredict what comes next:" }
   - { name: "STRC", text: "Start of sequence:\n{input_data}\n\nComplete the time series:" }
+
   - { name: "NMDEXT", text: "Here is the observed trend for {ts_name}. Extend it meaningfully:\n{input_data}" }
-  - { name: "PHYSP", text: "This data represents a physical process over time. Predict the next steps:\n{input_data}" }
-  - { name: "SNSR", text: "These are sensor readings from an ongoing process. Forecast the next period:\n{input_data}" }
-  - { name: "RGLR", text: "The pattern shows regularity and trend. Project it forward:\n{input_data}" }
-  - { name: "PERD", text: "Measurements have been recorded periodically. What comes next?\n{input_data}" }
-  - { name: "TASK", text: "Your task is to continue this time series with realistic values:\n{input_data}" }
-  - { name: "ANLZ", text: "You are analyzing a time-dependent process. Predict what happens next:\n{input_data}" }
-  - { name: "CMPLT", text: "Please complete the next part of this trend based on prior information:\n{input_data}" }
-  - { name: "FCSTP", text: "Forecast the likely continuation of this observed pattern:\n{input_data}" }
-  - { name: "LOGX", text: "What’s the logical extension of this sequence?\n{input_data}" }
-  - { name: "EVLV", text: "How does this sequence evolve over time?\n{input_data}" }
-  - { name: "IFTRND", text: "If this trend continues, what values appear next?\n{input_data}" }
-  - { name: "FILL", text: "Fill in the future of this timeline with consistent data:\n{input_data}" }
   - { name: "CTXLEN", text: "Predict the next steps for {ts_name} using the first {input_length} of {total_length} values:\n{input_data}" }
   - { name: "GIVEN", text: "Given this sequence from {ts_name}, forecast its continuation:\n{input_data}" }
   - { name: "FCTX", text: "Forecast from {ts_name}. Context length: {input_length}\n{input_data}" }
   - { name: "USEGEN", text: "Use the time series for {ts_name} to generate future values:\n{input_data}" }
-  - { name: "DSINFO", text: "You are provided with the first {input_length} entries from a dataset of length {total_length}.\nPredict what comes next:\n{input_data}" }
 
 input_data_factor: 0.8
 output_dir: 'results/LLMTIME_instruction'

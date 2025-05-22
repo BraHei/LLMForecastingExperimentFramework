@@ -27,7 +27,7 @@ from darts.models.forecasting.baselines import NaiveMean, NaiveSeasonal, NaiveDr
 
 def get_dynamic_baseline(model_name: str):
     if model_name == "NaiveSeasonal":
-        return lambda series_length, **kwargs: NaiveSeasonal(K=max(1, int(series_length * 0.2)), **kwargs)
+        return lambda series_length, **kwargs: NaiveSeasonal(**kwargs)
     elif model_name == "NaiveMovingAverage":
         return lambda series_length, **kwargs: NaiveMovingAverage(input_chunk_length=max(1, int(series_length * 0.2)), **kwargs)
     elif model_name == "NaiveMean":
@@ -61,7 +61,12 @@ class DartsSeriesProcessor:
         # --- Preperation ---------------------------------------------
         forecast_len = len(ts_data) - len(ts_data_split)
         series_train = TimeSeries.from_values(np.array(ts_data_split))
-        self.model = self.model_builder(len(ts_data_split), **self.cfg.model_parameters)
+
+        if self.model_name == "NaiveSeasonal":
+            self.model = self.model_builder(len(ts_data_split), K=ts_seasonality, **self.cfg.model_parameters)
+        else:
+            self.model = self.model_builder(len(ts_data_split), **self.cfg.model_parameters)
+        
         self.model.fit(series_train)
 
         # --- Prediction -----------------------------------------------

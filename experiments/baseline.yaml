@@ -2,7 +2,7 @@
 model_name: [NaiveMean, NaiveSeasonal, NaiveDrift, NaiveMovingAverage]
 dataset_name: "darts"
 dataset_params:
-  dataset_names: ["AirPassengers", "MonthlyMilk", "HeartRate", "GasRateCO2", "Wooly"]
+  dataset_names: ["AirPassengers", "MonthlyMilk", "IceCreamHeater", "GasRateCO2", "Wooly", "AusBeer"]
 preprocessor_name: "DARTS_BASELINE"
 preprocessor_params: {}
 input_data_factor: 0.8
