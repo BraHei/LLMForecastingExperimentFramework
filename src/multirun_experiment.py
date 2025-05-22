@@ -31,7 +31,7 @@ def run_grid(cfg_path: str | Path):
     base_dict = asdict(base_cfg) | base_cfg.extra  # merge base_cfg and extra
 
     for k, v in base_dict.items():
-        if k.endswith("_grid"):
+        if k.endswith("_grid") and v is not None:
             base_key = k[:-5]  # Remove '_grid'
             if base_key == "preprocessor_params":
                 # expand dict grid
