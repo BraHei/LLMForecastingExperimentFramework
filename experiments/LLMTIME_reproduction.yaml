@@ -1,6 +1,6 @@
 model_name_grid:
-  # - distilgpt2-88m
-  # - smollm2-135m
+  - distilgpt2-88m
+  - smollm2-135m
   - llama3.1-8b
 
 model_parameters:
@@ -11,7 +11,7 @@ model_parameters:
 
 dataset_name: "darts"
 dataset_params:
-  dataset_names: ["AirPassengers", "MonthlyMilk", "HeartRate", "GasRateCO2", "Wooly"]
+  dataset_names: ["AirPassengers", "MonthlyMilk", "IceCreamHeater", "GasRateCO2", "Wooly", "AusBeer"]
 
 preprocessor_name: "LLMTime"
 preprocessor_params:
