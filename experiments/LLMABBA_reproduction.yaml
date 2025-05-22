@@ -6,7 +6,7 @@ model_parameters:
   do_sample: true
 dataset_name: "darts"
 dataset_params:
-  dataset_names: ["AirPassengers", "MonthlyMilk", "HeartRate", "GasRateCO2", "Wooly"]
+  dataset_names: ["AirPassengers", "MonthlyMilk", "IceCreamHeater", "Wooly", "AusBeer"]
 preprocessor_name: "LLMABBA"
 preprocessor_params: {}
 input_data_factor: 0.8

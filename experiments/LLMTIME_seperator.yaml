@@ -11,7 +11,7 @@ model_parameters:
 
 dataset_name: "darts"
 dataset_params:
-  dataset_names: ["AirPassengers", "MonthlyMilk", "IceCreamHeater", "GasRateCO2", "Wooly", "AusBeer"]
+  dataset_names: ["AirPassengers", "MonthlyMilk", "IceCreamHeater", "Wooly", "AusBeer"]
 
 preprocessor_name: "LLMTime"
 
