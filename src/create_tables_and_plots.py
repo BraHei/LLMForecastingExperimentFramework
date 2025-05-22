@@ -12,9 +12,9 @@ def extract_model_name(config_path):
         config = yaml.safe_load(f)
         return config.get("model_name", Path(config_path).parent.name)
 
-def get_dynamic_group_columns(df, always_include=["model_name", "dataset_name"]):
+def get_dynamic_group_columns(df, always_include=["model_name", "series_id"]):
     exclude = set([
-        "experiment_name", "metric_name", "metric_value", "series_id", "instruction_text",
+        "experiment_name", "metric_name", "metric_value", "dataset_name", "instruction_text",
         "input_data_length", "input_data_factor", "device", "max_new_tokens",
         "temperature", "top_p", "do_sample"
     ])
@@ -60,12 +60,13 @@ def summarize_metrics_table(tsv_path, out_dir, comparison_metric="seasonalMeanAb
     group_cols = get_dynamic_group_columns(summary_df)
     print(f"Comparison axes: {group_cols}")
 
-    index = ["dataset_name"]
-    col_index = [col for col in group_cols if col != "dataset_name"]
+    index = ["series_id"]
+    col_index = [col for col in group_cols if col != "series_id"]
     pivot = summary_df.pivot_table(index=index, columns=col_index, values="metric_value", aggfunc="mean")
 
-    pivot.to_csv(out_dir / "metric_summary_wide.tsv", sep="\t")
     mean_sMASE = pivot.mean(axis=0).sort_values()
+    pivot = pd.concat([pivot, pd.DataFrame([mean_sMASE], index=["Mean"])])
+    pivot.to_csv(out_dir / "metric_summary_wide.tsv", sep="\t")
     print("\nMean sMASE Summary (lower is better):\n", mean_sMASE)
     mean_sMASE.to_csv(out_dir / "mean_summary.tsv", sep="\t")
     print(f"Saved mean summary to {out_dir / 'mean_summary.tsv'}")
