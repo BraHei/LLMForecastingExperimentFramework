@@ -1,4 +1,4 @@
-model_name: ["distilgpt2-88m", "smollm2-135m", "llama3-8b"]
+model_name: ["distilgpt2-88m", "smollm2-135m", "llama3.1-8b"]
 model_parameters:
   max_new_tokens: 150
   temperature: 1.0
