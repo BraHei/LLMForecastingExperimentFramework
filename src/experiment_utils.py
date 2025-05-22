@@ -36,7 +36,7 @@ def split_data(input_list, percent):
  
     return input_list[:cutoff]
 
-def save_experiment_settings(output_folder, model, tokenizer, dataset, analyzers):
+def save_experiment_settings(output_folder, model, preprocessor, dataset, analyzers):
     settings = {
         "model": {
             "checkpoint": model.checkpoint,
@@ -47,18 +47,18 @@ def save_experiment_settings(output_folder, model, tokenizer, dataset, analyzers
             "device": model.device,
             "precision": model.precision
         },
-        "tokenizer": {
-            "type": tokenizer.tokenizer_type,
+        "preprocessor": {
+            "type": preprocessor.preprocessor_type,
         },
         "dataset": dataset.metadata(),
         "analyzers": [analyzer.AnalyzerType for analyzer in analyzers]
     }
 
-    if hasattr(tokenizer, "encoder_params"):
-        settings["tokenizer"]["params"] = tokenizer.encoder_params
-    if hasattr(tokenizer, "settings"):
-        settings["tokenizer"]["settings"] = (
-            vars(tokenizer.settings) if hasattr(tokenizer.settings, "__dict__") else tokenizer.settings
+    if hasattr(preprocessor, "encoder_params"):
+        settings["preprocessor"]["params"] = preprocessor.encoder_params
+    if hasattr(preprocessor, "settings"):
+        settings["preprocessor"]["settings"] = (
+            vars(preprocessor.settings) if hasattr(preprocessor.settings, "__dict__") else preprocessor.settings
         )
 
     settings_path = Path(output_folder) / "settings_overview.json"

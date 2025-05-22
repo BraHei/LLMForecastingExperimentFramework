@@ -8,7 +8,7 @@ from src.pretokenizer_assets.llmtime import serialize_arr, deserialize_str, Seri
 
 class BaseTimeSeriesPreprocessor(ABC):
     def __init__(self):
-        self.tokenizer_type = "BaseClass"
+        self.preprocessor = "BaseClass"
         self.encoder = None
 
     @abstractmethod
@@ -21,7 +21,7 @@ class BaseTimeSeriesPreprocessor(ABC):
 
     def save_encoded(self, encoded_list, output_path=None):
         if output_path is None:
-            output_path = f"{self.tokenizer_type}_encoded_dataset.csv"
+            output_path = f"{self.preprocessor}_encoded_dataset.csv"
         with open(output_path, mode='w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(["id", "encoded_string"])
@@ -33,14 +33,14 @@ class BaseTimeSeriesPreprocessor(ABC):
         if self.encoder is None:
             raise ValueError("Encoder must be fitted before saving.")
         if filepath is None:
-            filepath = f"{self.tokenizer_type}_encoder.pkl"
+            filepath = f"{self.preprocessor}_encoder.pkl"
         with open(filepath, "wb") as f:
             pickle.dump(self.encoder, f, protocol=pickle.HIGHEST_PROTOCOL)
         print(f"Encoder saved to {filepath}")
 
     def load_model(self, filepath=None):
         if filepath is None:
-            filepath = f"{self.tokenizer_type}_encoder.pkl"
+            filepath = f"{self.preprocessor}_encoder.pkl"
         with open(filepath, "rb") as f:
             encoder = pickle.load(f)
         self.encoder = encoder
@@ -49,7 +49,7 @@ class BaseTimeSeriesPreprocessor(ABC):
 class LLMABBAPreprocessor(BaseTimeSeriesPreprocessor):
     def __init__(self, **encoder_params):
         super().__init__()
-        self.tokenizer_type = "LLM-ABBA"
+        self.preprocessor_type = "LLM-ABBA"
         self.encoder_params = encoder_params
 
     def filter_symbols(self, encoded_string):
@@ -77,7 +77,7 @@ class LLMABBAPreprocessor(BaseTimeSeriesPreprocessor):
 class LLMABBAEncoderSpaced(BaseTimeSeriesPreprocessor):
     def __init__(self, **encoder_params):
         super().__init__()
-        self.tokenizer_type = "LLM-ABBA"
+        self.preprocessor = "LLM-ABBA"
         self.encoder_params = encoder_params
 
     def encode(self, time_series):
@@ -100,7 +100,7 @@ class LLMABBAEncoderSpaced(BaseTimeSeriesPreprocessor):
 class LLMTimePreprocessor(BaseTimeSeriesPreprocessor):
     def __init__(self, base = 10, prec = 3, bit_sep = '', time_sep = ',', alpha = 0.99, beta = 0.3, basic = False):
         super().__init__()
-        self.tokenizer_type = "LLMTime"
+        self.preprocessor_type = "LLMTime"
         
         self.settings = SerializerSettings()
         self.settings.base = base
