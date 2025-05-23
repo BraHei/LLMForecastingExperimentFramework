@@ -43,7 +43,39 @@ def read_experiment_tsv(input_path):
     print(f"Reading TSV: {tsv_path.resolve()}")
     return pd.read_csv(tsv_path, sep="\t")
 
-def summarize_metrics_table(tsv_path, out_dir, comparison_metric="seasonalMeanAbsoluteScaledError"):
+def summarize_metrics_df(df, out_dir, suffix="", subfolder=None):
+    """
+    Perform summary analysis (win counts, mean metrics, pivot table) on a provided DataFrame,
+    writing output files with an optional suffix (e.g., per-model).
+    """
+    if subfolder:
+        out_dir = out_dir / subfolder
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+    group_cols = get_dynamic_group_columns(df)
+    index = ["series_id"]
+    col_index = [col for col in group_cols if col != "series_id"]
+    pivot = df.pivot_table(index=index, columns=col_index, values="metric_value", aggfunc="median")
+    
+    winners = pivot.eq(pivot.min(axis=1), axis=0)
+    win_counts = winners.sum(axis=0).sort_values(ascending=False)
+    median_metric = pivot.median(axis=0).sort_values()
+
+    # Save win summary
+    win_counts.to_csv(out_dir / f"win_summary{suffix}.tsv", sep="\t", header=["Wins"])
+    print(f"Saved win summary to {out_dir / f'win_summary{suffix}.tsv'}")
+    # Save win mask
+    winners.astype(int).to_csv(out_dir / f"wins{suffix}.tsv", sep="\t")
+    # Save mean summary
+    median_metric.to_csv(out_dir / f"median_summary{suffix}.tsv", sep="\t")
+    print(f"Saved mean summary to {out_dir / f'median_summary{suffix}.tsv'}")
+    # Save pivot (with mean row for convenience)
+    pivot_mean = pd.concat([pivot, pd.DataFrame([median_metric], index=["Median"])])
+    pivot_formatted = pivot_mean.astype("object").map(lambda x: f"{x:.2f}" if pd.notnull(x) and isinstance(x, (float, int)) else "")
+    pivot_formatted.to_csv(out_dir / f"metric_summary_wide{suffix}.tsv", sep="\t")
+    print(f"Saved wide metric summary to {out_dir / f'metric_summary_wide{suffix}.tsv'}")
+
+def summarize_metrics_table(tsv_path, out_dir, comparison_metric="seasonalMeanAbsoluteScaledError", model_specific=False):
     df = read_experiment_tsv(tsv_path)
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -57,25 +89,16 @@ def summarize_metrics_table(tsv_path, out_dir, comparison_metric="seasonalMeanAb
             raise ValueError(f"Neither '{comparison_metric}' nor '{fallback}' found in 'metric_name' column.")
 
     summary_df = df[df["metric_name"] == comparison_metric].copy()
-    group_cols = get_dynamic_group_columns(summary_df)
-    print(f"Comparison axes: {group_cols}")
 
-    index = ["series_id"]
-    col_index = [col for col in group_cols if col != "series_id"]
-    pivot = summary_df.pivot_table(index=index, columns=col_index, values="metric_value", aggfunc="mean")
+    if model_specific:
+        unique_models = summary_df["model_name"].unique()
+        for model in unique_models:
+            model_df = summary_df[summary_df["model_name"] == model]
+            print(f"Analyzing model: {model}")
+            summarize_metrics_df(model_df, out_dir, suffix="", subfolder=f"model_{model}")
+    else:
+        summarize_metrics_df(summary_df, out_dir, suffix="", subfolder="global")
 
-    mean_sMASE = pivot.mean(axis=0).sort_values()
-    pivot = pd.concat([pivot, pd.DataFrame([mean_sMASE], index=["Mean"])])
-    pivot.to_csv(out_dir / "metric_summary_wide.tsv", sep="\t")
-    print("\nMean sMASE Summary (lower is better):\n", mean_sMASE)
-    mean_sMASE.to_csv(out_dir / "mean_summary.tsv", sep="\t")
-    print(f"Saved mean summary to {out_dir / 'mean_summary.tsv'}")
-
-    ax = mean_sMASE.plot(kind='barh', figsize=(10, 6), title=f'Mean {comparison_metric} per Setting')
-    ax.set_xlabel(f'Mean {comparison_metric} (lower is better)')
-    plt.tight_layout()
-    plt.savefig(out_dir / f"mean_{comparison_metric}.png", bbox_inches='tight')
-    plt.close()
 
 def collect_and_merge_model_responses(parent_folder):
     parent_folder = Path(parent_folder)
@@ -113,13 +136,19 @@ def collect_and_merge_model_responses(parent_folder):
     return df
 
 
+from pathlib import Path
+import json
+import matplotlib.pyplot as plt
+
 def plot_predictions_across_models(base_folder, output_folder):
     base_path = Path(base_folder)
     output_dir = Path(output_folder)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     series_data = {}
+    all_models = set()
 
+    # First pass: gather all model names
     for subdir in base_path.iterdir():
         if not subdir.is_dir():
             continue
@@ -130,6 +159,7 @@ def plot_predictions_across_models(base_folder, output_folder):
             continue
 
         model_name = extract_model_name(config_path)
+        all_models.add(model_name)
 
         with open(results_path, 'r') as f:
             for line in f:
@@ -139,18 +169,22 @@ def plot_predictions_across_models(base_folder, output_folder):
                 recn = entry["data"]["reconstructed_split"]
                 pred = entry["data"].get("predicted")
 
-                # Only store original/reconstructed once per dataset
                 if ds not in series_data:
                     series_data[ds] = {
                         "original": orig,
                         "reconstructed": recn,
                         "models": {}
                     }
-                # Store all model predictions
                 if pred:
                     series_data[ds]["models"][model_name] = pred
 
-    pred_colors = plt.cm.get_cmap('tab10').colors
+    # Assign each model a unique color
+    all_models = sorted(all_models)
+    pred_colors = plt.colormaps['tab10'].colors
+
+    model_color_map = {
+        mdl: pred_colors[i % len(pred_colors)] for i, mdl in enumerate(all_models)
+    }
 
     for ds, data in series_data.items():
         orig = data["original"]
@@ -159,16 +193,14 @@ def plot_predictions_across_models(base_folder, output_folder):
 
         plt.figure(figsize=(12, 5))
 
-        # Plot original (black, thick)
-        # Plot reconstructed (gray, dotted, slightly thinner)
         plt.plot(range(len(orig)), orig, label="Original", color="black", linewidth=1.3, zorder=1)
         plt.plot(range(r_end), recn, color="gray", linestyle=":", linewidth=1.0, alpha=0.9, label="Reconstructed", zorder=2)
 
-        # Plot all model predictions
-        for i, (mdl, pred) in enumerate(data["models"].items()):
+        # Plot all model predictions with consistent colors
+        for mdl, pred in data["models"].items():
             xs = range(r_end, r_end + len(pred))
             plt.plot(xs, pred, linestyle="--", linewidth=1.3,
-                     color=pred_colors[i % len(pred_colors)], alpha=0.95,
+                     color=model_color_map[mdl], alpha=0.95,
                      label=f"Prediction - {mdl}", zorder=2)
 
         plt.title(f"{ds} - Predictions by Model")
@@ -187,6 +219,7 @@ def main():
     parser.add_argument("--input_folder", type=str, required=True, help="Path to experiment results top folder (or TSV)")
     parser.add_argument("--output_folder", type=str, default=None, help="Directory where outputs will be saved")
     parser.add_argument("--summarize", action="store_true", help="Summarize metrics and create normalized comparisons")
+    parser.add_argument("--model_specific", action="store_true", help="Summarize metrics and create normalized comparisons")
     parser.add_argument("--plot-predictions", action="store_true", help="Plot prediction series from all model_responses in subfolders")
     parser.add_argument("--comparison-metric", type=str, default="seasonalMeanAbsoluteScaledError", help="Metric for comparison (default: seasonalMeanAbsoluteScaledError)")
 
@@ -195,7 +228,7 @@ def main():
     output_folder.mkdir(parents=True, exist_ok=True)
 
     if args.summarize:
-        summarize_metrics_table(args.input_folder, output_folder, args.comparison_metric)
+        summarize_metrics_table(args.input_folder, output_folder, args.comparison_metric, args.model_specific)
     if args.plot_predictions:
         plot_predictions_across_models(args.input_folder, output_folder)
     if not (args.summarize or args.plot_predictions):
