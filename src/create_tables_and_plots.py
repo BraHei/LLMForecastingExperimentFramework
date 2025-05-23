@@ -15,8 +15,7 @@ def extract_model_name(config_path):
 def get_dynamic_group_columns(df, always_include=["model_name", "series_id"]):
     exclude = set([
         "experiment_name", "metric_name", "metric_value", "dataset_name", "instruction_text",
-        "input_data_length", "input_data_factor", "device", "max_new_tokens",
-        "temperature", "top_p", "do_sample"
+        "input_data_length", "input_data_factor", "device", "max_new_tokens", "top_p", "do_sample"
     ])
     candidates = [col for col in df.columns if col not in exclude and col not in always_include]
     dynamic = [col for col in candidates if df[col].nunique() > 1]

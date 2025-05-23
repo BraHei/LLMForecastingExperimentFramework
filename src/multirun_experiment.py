@@ -33,11 +33,7 @@ def run_grid(cfg_path: str | Path):
     for k, v in base_dict.items():
         if k.endswith("_grid") and v is not None:
             base_key = k[:-5]  # Remove '_grid'
-            if base_key == "preprocessor_params":
-                # expand dict grid
-                sweep_axes[base_key] = expand_param_grid(v)
-            else:
-                sweep_axes[base_key] = ensure_list(v)
+            sweep_axes[base_key] = expand_param_grid(v)
 
     # For all standard fields not in sweep_axes, add as singleton
     for key in ["model_name", "model_parameters", "preprocessor_params", "instruction_object", "input_data_factor"]:
