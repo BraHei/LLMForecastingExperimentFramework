@@ -1,0 +1,29 @@
+model_name: distilgpt2-88m
+
+model_parameters:
+  max_new_tokens: 150
+  temperature: 1.0
+  top_p: 0.9
+  do_sample: true
+
+dataset_name: "darts"
+dataset_params:
+  dataset_names: ["AirPassengers", "MonthlyMilk", "IceCreamHeater", "Wooly", "AusBeer"]
+
+preprocessor_name: "LLMTime"
+preprocessor_params_grid:
+  alpha: [1.00, 0.5, 0.1]
+  beta: [1.00, 0.5, 0.1]
+  base: [10]
+  prec: [3, 2]
+  time_sep:
+    - ' ^'
+    - ' ~'
+    - '&'
+    - ','
+    - '\t'
+
+input_data_factor: 0.8
+output_dir: 'results/LLMTIME_distil_parameters'
+output_jsonl: "model_responses.jsonl"
+data_analyzers: [MAE, MSE, MASE]

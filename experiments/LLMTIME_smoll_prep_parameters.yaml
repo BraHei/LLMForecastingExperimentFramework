@@ -1,6 +1,4 @@
-model_name_grid:
-  - distilgpt2-88m
-  - smollm2-135m
+model_name: smollm2-135m
 
 model_parameters:
   max_new_tokens: 150
@@ -14,12 +12,18 @@ dataset_params:
 
 preprocessor_name: "LLMTime"
 preprocessor_params_grid:
-  alpha: [1.00, 0.99, 0.5, 0.1]
-  beta: [1.00, 0.99, 0.5, 0.1]
+  alpha: [1.00, 0.5, 0.1]
+  beta: [1.00, 0.5, 0.1]
   base: [10]
-  prec: [4, 3, 2]
+  prec: [3, 2]
+  time_sep:
+    - ' | '
+    - ' @'
+    - ')('
+    - ' :'
+    - ' .'
 
 input_data_factor: 0.8
-output_dir: 'results/LLMTIME_parameters'
+output_dir: 'results/LLMTIME_smoll_parameters'
 output_jsonl: "model_responses.jsonl"
 data_analyzers: [MAE, MSE, MASE]

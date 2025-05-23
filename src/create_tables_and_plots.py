@@ -60,7 +60,8 @@ def summarize_metrics_df(df, out_dir, suffix="", subfolder=None):
     winners = pivot.eq(pivot.min(axis=1), axis=0)
     win_counts = winners.sum(axis=0).sort_values(ascending=False)
     median_metric = pivot.median(axis=0).sort_values()
-
+    median_metric = median_metric.astype("object").map(lambda x: f"{x:.2f}" if pd.notnull(x) and isinstance(x, (float, int)) else "")
+    
     # Save win summary
     win_counts.to_csv(out_dir / f"win_summary{suffix}.tsv", sep="\t", header=["Wins"])
     print(f"Saved win summary to {out_dir / f'win_summary{suffix}.tsv'}")
