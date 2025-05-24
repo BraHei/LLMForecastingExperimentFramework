@@ -10,6 +10,7 @@ class BaseTimeSeriesPreprocessor(ABC):
     def __init__(self):
         self.preprocessor = "BaseClass"
         self.encoder = None
+        self.time_seperator = ""
 
     @abstractmethod
     def encode(self, time_series):
@@ -102,7 +103,7 @@ class LLMTimePreprocessor(BaseTimeSeriesPreprocessor):
     def __init__(self, base = 10, prec = 3, bit_sep = '', time_sep = ', ', alpha = 0.99, beta = 0.3, basic = False, signed=True):
         super().__init__()
         self.preprocessor_type = "LLMTime"
-        
+        self.time_seperator = time_sep
         self.settings = SerializerSettings()
         self.settings.base = base
         self.settings.prec = prec   

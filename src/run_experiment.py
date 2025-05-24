@@ -76,7 +76,7 @@ class SeriesProcessor:
 
         # --- LLM interaction -----------------------------------------
         start = time.perf_counter()
-        generated = self.model.generate_response(data_string)
+        generated = self.model.generate_response(data_string, self.preprocessor.time_seperator)
         latency = time.perf_counter() - start
 
         # --- decode prediction ---------------------------------------
