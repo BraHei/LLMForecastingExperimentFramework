@@ -20,7 +20,7 @@
             "module": "src.multirun_experiment",
             "args": [
                 "--config",
-                "experiments/LLMTIME_reproduction.yaml",
+                "experiments/LLMTIME_distil_parameters_trail.yaml",
             ],
             "console": "integratedTerminal",
             "justMyCode": false,

@@ -64,7 +64,7 @@ class LMWrapper:
         return self.context_window
 
     @torch.no_grad()
-    def generate_response(self, prompt: str, seperator: str) -> str:
+    def generate_response(self, prompt: str, separator: str) -> str:
         try:
             if self.is_instruct:
                 messages = [{"role": "user", "content": prompt}]
@@ -77,19 +77,28 @@ class LMWrapper:
                 max_length=self.context_window - self.max_new_tokens if self.context_window else None,
             ).to(self.model.device)
 
-            # Define allowed digits and separator
-            used_chars = set(prompt) # Make sure all the unique input values are covered.
-            allowed_chars = set([str(i) for i in list(range(10000))] + [seperator, " ", "-"] + used_chars)
+            # Define allowed tokens: digits, separator, space, dash, and any known numeric tokens up to 1000
+            allowed_tokens = set("0123456789" + separator + " -" + prompt)
 
-            # Get token IDs for individual characters (if they exist as tokens)
-            allowed_token_ids = []
+            # Add number strings that are single tokens (like "259", "1000") — only if tokenizer treats them as one token
+            for i in range(10000):
+                s = str(i)
+                token_ids = self.tokenizer(s, add_special_tokens=False)["input_ids"]
+                if len(token_ids) == 1:
+                    allowed_tokens.add(s)
 
-            for char in allowed_chars:
-                token_ids = self.tokenizer(char, add_special_tokens=False)["input_ids"]
-                allowed_token_ids.extend(token_ids)
+            # Convert allowed tokens into token IDs
+            allowed_token_ids = set()
+            for token in allowed_tokens:
+                token_ids = self.tokenizer(token, add_special_tokens=False)["input_ids"]
+                # Skip unknown tokens
+                if self.tokenizer.unk_token_id in token_ids and len(token_ids) == 1:
+                    continue
+                allowed_token_ids.update(token_ids)
 
-            # Compute bad token IDs
-            bad_token_ids = [[i] for i in range(len(self.tokenizer)) if i not in allowed_token_ids]
+            # Build bad token list
+            vocab_size = len(self.tokenizer)
+            bad_token_ids = [[i] for i in range(vocab_size) if i not in allowed_token_ids]
 
             torch.cuda.empty_cache()
             with torch.inference_mode():

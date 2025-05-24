@@ -1,10 +1,9 @@
 model_name: distilgpt2-88m
 
-model_parameters:
-  max_new_tokens: 150
-  temperature: 1.0
-  top_p: 0.9
-  do_sample: true
+model_parameters_grid:
+  max_new_tokens: [150]
+  temperature: [0.25, 0.5, 0.75, 1.0]
+  do_sample: [true]
 
 dataset_name: "darts"
 dataset_params:
@@ -12,18 +11,19 @@ dataset_params:
 
 preprocessor_name: "LLMTime"
 preprocessor_params_grid:
-  alpha: [1.00, 0.5, 0.1]
-  beta: [1.00, 0.5, 0.1]
+  alpha: [0.5, 0.9, 0.99]
+  beta: [0.0, 0.3]
   base: [10]
-  prec: [3, 2]
+  prec: [2, 3]
+  bit_sep: 
+    - ''
+    - ' '
   time_sep:
-    - ' ^'
-    - ' ~'
-    - '&'
     - ','
-    - '\t'
+    - ', '
+    - ' ,'
 
 input_data_factor: 0.8
-output_dir: 'results/LLMTIME_distil_parameters'
+output_dir: 'results/LLMTIME_distil_grid_parameters'
 output_jsonl: "model_responses.jsonl"
 data_analyzers: [MAE, MSE, MASE]
