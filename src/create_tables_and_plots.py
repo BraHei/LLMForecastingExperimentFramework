@@ -12,13 +12,13 @@ def extract_model_name(config_path):
         config = yaml.safe_load(f)
         return config.get("model_name", Path(config_path).parent.name)
 
-def get_dynamic_group_columns(df, always_include=["model_name", "series_id"]):
+def get_dynamic_group_columns(df, always_include=["experiment_name", "model_name"]):
     exclude = set([
-        "experiment_name", "metric_name", "metric_value", "dataset_name", "instruction_text",
+        "experiment_name", "metric_name", "metric_value", "dataset_name", "series_id",
         "input_data_length", "input_data_factor", "device", "max_new_tokens", "top_p", "do_sample"
     ])
     candidates = [col for col in df.columns if col not in exclude and col not in always_include]
-    dynamic = [col for col in candidates if df[col].nunique() > 1]
+    dynamic = [col for col in candidates if df[col].nunique(dropna=False) > 1]
     return always_include + dynamic
 
 def find_tsv_in_folder(folder_path):
@@ -40,45 +40,34 @@ def read_experiment_tsv(input_path):
     else:
         raise FileNotFoundError(f"Input '{input_path}' is not a .tsv file or directory containing a .tsv file.")
     print(f"Reading TSV: {tsv_path.resolve()}")
-    return pd.read_csv(tsv_path, sep="\t")
+    return pd.read_csv(tsv_path, sep="\t", skipinitialspace=False)
 
 def summarize_metrics_df(df, out_dir, suffix="", subfolder=None):
     """
-    Perform summary analysis (win counts, mean metrics, pivot table) on a provided DataFrame,
-    writing output files with an optional suffix (e.g., per-model).
+    Perform summary analysis (median metrics per measurement),
+    saving results sorted by lowest median first.
     """
     if subfolder:
         out_dir = out_dir / subfolder
         out_dir.mkdir(parents=True, exist_ok=True)
 
     group_cols = get_dynamic_group_columns(df)
-    index = ["series_id"]
-    col_index = [col for col in group_cols if col != "series_id"]
-    pivot = df.pivot_table(index=index, columns=col_index, values="metric_value", aggfunc="median")
-    
-    winners = pivot.eq(pivot.min(axis=1), axis=0)
-    win_counts = winners.sum(axis=0).sort_values(ascending=False)
-    median_metric = pivot.median(axis=0).sort_values()
-    median_metric = median_metric.astype("object").map(lambda x: f"{x:.2f}" if pd.notnull(x) and isinstance(x, (float, int)) else "")
-    
-    # Save win summary
-    win_counts.to_csv(out_dir / f"win_summary{suffix}.tsv", sep="\t", header=["Wins"])
-    print(f"Saved win summary to {out_dir / f'win_summary{suffix}.tsv'}")
-    # Save win mask
-    winners.astype(int).to_csv(out_dir / f"wins{suffix}.tsv", sep="\t")
-    # Save mean summary
-    median_metric.to_csv(out_dir / f"median_summary{suffix}.tsv", sep="\t")
-    print(f"Saved mean summary to {out_dir / f'median_summary{suffix}.tsv'}")
-    # Save pivot (with mean row for convenience)
-    pivot_mean = pd.concat([pivot, pd.DataFrame([median_metric], index=["Median"])])
-    pivot_formatted = pivot_mean.astype("object").map(lambda x: f"{x:.2f}" if pd.notnull(x) and isinstance(x, (float, int)) else "")
-    pivot_formatted.to_csv(out_dir / f"metric_summary_wide{suffix}.tsv", sep="\t")
-    print(f"Saved wide metric summary to {out_dir / f'metric_summary_wide{suffix}.tsv'}")
+    medians_df = (
+        df.groupby(group_cols, dropna=False)["metric_value"]
+        .median()
+        .reset_index()
+        .sort_values("metric_value", ascending=True)  # Sort so lowest median is first
+    )
+    medians_df.to_csv(out_dir / f"median_per_measurement{suffix}.tsv", sep="\t", index=False)
+    print(f"Saved median per measurement to {out_dir / f'median_per_measurement{suffix}.tsv'}")
 
 def summarize_metrics_table(tsv_path, out_dir, comparison_metric="seasonalMeanAbsoluteScaledError", model_specific=False):
     df = read_experiment_tsv(tsv_path)
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    bad_runs = (df.loc[df["metric_name"].eq(f"Malformed output"), "experiment_name"].unique())
+    df = df[~df["experiment_name"].isin(bad_runs)].copy()
 
     if comparison_metric not in df['metric_name'].unique():
         fallback = "MeanAbsoluteScaledError"
@@ -134,11 +123,6 @@ def collect_and_merge_model_responses(parent_folder):
         raise ValueError("No model_responses.jsonl rows found in any subfolder!")
     df = pd.DataFrame(all_rows)
     return df
-
-
-from pathlib import Path
-import json
-import matplotlib.pyplot as plt
 
 def plot_predictions_across_models(base_folder, output_folder):
     base_path = Path(base_folder)
