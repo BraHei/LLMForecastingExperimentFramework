@@ -28,8 +28,6 @@ from darts.models.forecasting.baselines import NaiveMean, NaiveSeasonal, NaiveDr
 def get_dynamic_baseline(model_name: str):
     if model_name == "NaiveSeasonal":
         return lambda series_length, **kwargs: NaiveSeasonal(**kwargs)
-    elif model_name == "NaiveMovingAverage":
-        return lambda series_length, **kwargs: NaiveMovingAverage(input_chunk_length=max(1, int(series_length * 0.2)), **kwargs)
     elif model_name == "NaiveMean":
         return lambda series_length, **kwargs: NaiveMean(**kwargs)
     elif model_name == "NaiveDrift":

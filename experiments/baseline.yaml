@@ -1,5 +1,5 @@
 #Used soley by the darts_baseline_runner.py. Key model_name is mutli by default. Use model_parameters for selection of Darts baseline algorithms.
-model_name: [NaiveMean, NaiveSeasonal, NaiveDrift, NaiveMovingAverage]
+model_name: [NaiveMean, NaiveSeasonal, NaiveDrift]
 dataset_name: "darts"
 dataset_params:
   dataset_names: ["AirPassengers", "MonthlyMilk", "IceCreamHeater", "Wooly", "AusBeer"]

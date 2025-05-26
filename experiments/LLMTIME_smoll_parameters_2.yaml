@@ -1,0 +1,23 @@
+model_name: smollm2-135m
+
+model_parameters_grid:
+  max_new_tokens: [150]
+  temperature: [0.25, 0.5, 0.75]
+  do_sample: [true]
+
+dataset_name: "darts"
+dataset_params:
+  dataset_names: ["AirPassengers", "MonthlyMilk", "IceCreamHeater", "Wooly", "AusBeer"]
+
+preprocessor_name: "LLMTime"
+preprocessor_params_grid:
+  alpha: [0.1, 0.99]
+  beta: [0.0, 0.3, 0.5]
+  prec: [2, 3, 4]
+  time_sep:
+    - ','
+
+input_data_factor: 0.8
+output_dir: 'results/LLMTIME_smoll_grid_parameters_2'
+output_jsonl: "model_responses.jsonl"
+data_analyzers: [MAE, MSE, MASE]
