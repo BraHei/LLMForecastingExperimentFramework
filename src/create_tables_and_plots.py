@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import json
 import yaml
 
+from src.experiment_utils import fix_output_ownership
+
 def extract_model_name(config_path):
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
@@ -251,10 +253,13 @@ def main():
 
     if args.summarize:
         summarize_metrics_table(args.input_folder, output_folder, args.comparison_metric, args.model_specific)
+        fix_output_ownership(output_folder)
     if args.plot_predictions:
         plot_predictions_across_models(args.input_folder, output_folder)
+        fix_output_ownership(output_folder)
     if not (args.summarize or args.plot_predictions):
         parser.print_help()
+
 
 if __name__ == "__main__":
     main()
