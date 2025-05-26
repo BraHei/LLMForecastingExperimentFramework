@@ -100,7 +100,7 @@ class LLMABBAEncoderSpaced(BaseTimeSeriesPreprocessor):
 # Reference https://github.com/ngruver/llmtime/blob/f74234c43e06de78774d94c0974371a87b1c6971/models/llmtime.py#L23
 # https://github.com/ngruver/llmtime/blob/main/experiments/run_darts.py
 class LLMTimePreprocessor(BaseTimeSeriesPreprocessor):
-    def __init__(self, base = 10, prec = 3, bit_sep = '', time_sep = ', ', alpha = 0.99, beta = 0.3, basic = False, signed=True):
+    def __init__(self, base = 10, prec = 3, bit_sep = '', time_sep = ',', alpha = 0.99, beta = 0.3, basic = False, signed=True):
         super().__init__()
         self.preprocessor_type = "LLMTime"
         self.time_seperator = time_sep
@@ -109,10 +109,11 @@ class LLMTimePreprocessor(BaseTimeSeriesPreprocessor):
         self.settings.prec = prec   
         self.settings.bit_sep = bit_sep
         self.settings.time_sep = time_sep
+        self.settings.signed = signed
         
         self.scalar_alpha = alpha
         self.scalar_beta = beta
-        self.scalar_basic = False
+        self.scalar_basic = basic
         self.scalar_q = None
         self.scalar_min_ = None
 
