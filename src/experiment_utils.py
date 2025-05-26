@@ -150,8 +150,8 @@ class ResultRecorder:
         flat["model_name"] = cfg.model_name
         flat["preprocessor_name"] = cfg.preprocessor_name
         flat["dataset_name"] = cfg.dataset_name
-        flat["instruction_name"] = cfg.instruction_object[0]['name'] if cfg.instruction_object else None
-        flat["instruction_text"] = cfg.instruction_object[0]['text'] if cfg.instruction_object else None
+        flat["instruction_name"] = cfg.instruction_object['name'] if cfg.instruction_object else None
+        flat["instruction_text"] = cfg.instruction_object['text'] if cfg.instruction_object else None
         flat["input_data_length"] = cfg.input_data_length
         flat["input_data_factor"] = cfg.input_data_factor
         flat.update(cfg.preprocessor_params)
