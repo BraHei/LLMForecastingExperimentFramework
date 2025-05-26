@@ -130,9 +130,8 @@ class ExperimentConfig:
         # Instruction shorthand if present
         inst_code: Optional[str] = None
         if self.instruction_object:
-            first = self.instruction_object[0]
-            if isinstance(first, dict) and 'name' in first and first['name']:
-                inst_code = first['name']
+            if isinstance(self.instruction_object, dict) and 'name' in self.instruction_object and self.instruction_object['name']:
+                inst_code = self.instruction_object['name']
         if inst_code:
             parts.append(f"I-{inst_code}")
 

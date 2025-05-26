@@ -60,8 +60,7 @@ class SeriesProcessor:
 
         # --- prepend instruction ------------------------------------
         if self.cfg.instruction_object:
-            first = self.cfg.instruction_object[0]
-            instr_text = first.get("text", "")
+            instr_text = self.cfg.instruction_object.get("text", "")
             try:
                 formatted = instr_text.format(
                     timeseries_name=ts_name,
