@@ -42,32 +42,70 @@ def read_experiment_tsv(input_path):
     print(f"Reading TSV: {tsv_path.resolve()}")
     return pd.read_csv(tsv_path, sep="\t", skipinitialspace=False)
 
+def group_median_na_if_any_na(df, group_cols):
+    # Custom aggregation function: returns NA if any NA, else median
+    def median_or_na(series):
+        if series.isna().any():
+            return pd.NA
+        return series.median()
+
+    return (
+        df.groupby(group_cols, dropna=False)["metric_value"]
+        .agg(median_or_na)
+        .reset_index()
+    )
+
 def summarize_metrics_df(df, out_dir, suffix="", subfolder=None):
     """
     Perform summary analysis (median metrics per measurement),
-    saving results sorted by lowest median first.
+    saving results sorted by lowest median first **and** a wide table
+    that ends with a “Median” row.
     """
     if subfolder:
         out_dir = out_dir / subfolder
         out_dir.mkdir(parents=True, exist_ok=True)
 
     group_cols = get_dynamic_group_columns(df)
-    medians_df = (
-        df.groupby(group_cols, dropna=False)["metric_value"]
-        .median()
-        .reset_index()
-        .sort_values("metric_value", ascending=True)  # Sort so lowest median is first
+
+    # Medians
+    medians_numeric = group_median_na_if_any_na(df, group_cols)
+    median_map      = (medians_numeric
+                       .set_index("experiment_name")["metric_value"]
+                       .to_dict())   
+    medians_pretty = (
+        medians_numeric
+        .sort_values("metric_value", ascending=True)
+        .astype("object")
+        .map(lambda x: f"{x:.2f}" if pd.notna(x) and isinstance(x, (float, int)) else x)
     )
-    medians_df.to_csv(out_dir / f"median_per_measurement{suffix}.tsv", sep="\t", index=False)
+    medians_pretty.to_csv(out_dir / f"median_per_measurement{suffix}.tsv",
+                          sep="\t", index=False)
     print(f"Saved median per measurement to {out_dir / f'median_per_measurement{suffix}.tsv'}")
+
+    # Summary
+    index      = ["series_id"]
+    col_index  = [c for c in group_cols if c != "series_id"]
+    pivot = df.pivot_table(index=index, columns=col_index, values="metric_value")
+    median_row = [
+        median_map.get(exp_name, pd.NA)
+        for exp_name in pivot.columns.get_level_values(0)
+    ]
+    pivot.loc["Median"] = median_row 
+    fmt = lambda x: f"{x:.2f}" if pd.notna(x) and isinstance(x, (float, int)) else x
+    pivot = pivot.astype("object").map(fmt)
+
+    pivot.to_csv(out_dir / f"metric_summary_wide{suffix}.tsv", sep="\t")
+    print(f"Saved wide metric summary to {out_dir / f'metric_summary_wide{suffix}.tsv'}")
+
 
 def summarize_metrics_table(tsv_path, out_dir, comparison_metric="seasonalMeanAbsoluteScaledError", model_specific=False):
     df = read_experiment_tsv(tsv_path)
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    bad_runs = (df.loc[df["metric_name"].eq(f"Malformed output"), "experiment_name"].unique())
-    df = df[~df["experiment_name"].isin(bad_runs)].copy()
+    malformed_mask = df["metric_name"].eq("Malformed output")
+    df.loc[malformed_mask, "metric_name"] = comparison_metric
+    df.loc[malformed_mask, "metric_value"] = pd.NA 
 
     if comparison_metric not in df['metric_name'].unique():
         fallback = "MeanAbsoluteScaledError"
