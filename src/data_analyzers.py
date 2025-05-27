@@ -66,7 +66,7 @@ class MeanAbsoluteScaledError(BaseDataAnalyzer):
         if seasonality >= len(training):
             raise ValueError("Seasonality must be less than the length of the training data.")
         
-        naive_errors = np.abs(training[seasonality:] - training[:-seasonality])
+        naive_errors = np.abs(training[:-seasonality] - training[seasonality:])
         scale = np.mean(naive_errors)
 
         return forecast_error / scale if scale != 0 else np.inf
