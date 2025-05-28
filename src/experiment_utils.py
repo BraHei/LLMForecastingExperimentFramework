@@ -74,8 +74,21 @@ def inverse_transform_safe(encoder, encoded_str):
         return None, False
 
 
-def plot_series(series, reconstruction, prediction, success, output_folder, prediction_offset=None):
-    plt.style.use('default')  # Use default matplotlib style
+def plot_series(series, reconstruction, predictions, successes, output_folder, prediction_offset=None):
+    """
+    Plot the original series, reconstruction, and multiple predictions on a single plot.
+    Args:
+        series: dict with keys "metadata" and "series"
+        reconstruction: list or array
+        predictions: list of predicted arrays/lists
+        successes: list of bools (same length as predictions)
+        output_folder: directory to save plot
+        prediction_offset: where to start plotting predictions
+        plot_suffix: optional unique suffix for filename
+    """
+    import matplotlib.pyplot as plt
+
+    plt.style.use('default')
 
     idx = series["metadata"]["dataset_name"]
     original = series["series"]
@@ -83,25 +96,36 @@ def plot_series(series, reconstruction, prediction, success, output_folder, pred
     if prediction_offset is None:
         prediction_offset = len(original)
 
-    # Determine the x-axis length
+    # Determine x-axis length: longest prediction that succeeded, or fallback to reconstruction
+    valid_pred_lengths = [
+        len(pred) for pred, succ in zip(predictions, successes) if succ and pred is not None
+    ]
+    max_pred_length = max(valid_pred_lengths) if valid_pred_lengths else 0
     max_len = min(
         len(original),
-        prediction_offset + len(prediction) if (success and prediction is not None) else len(reconstruction)
+        prediction_offset + max_pred_length if max_pred_length > 0 else len(reconstruction)
     )
 
-    # Create figure and plot
     plt.figure(figsize=(10, 4))
     plt.plot(range(len(original)), original, label="Original")
-    if (len(reconstruction) > 0):
+    if len(reconstruction) > 0:
         plt.plot(range(len(reconstruction)), reconstruction, label="Reconstruction")
 
-    if success and prediction is not None:
-        pred_end = prediction_offset + len(prediction)
-        plt.plot(range(prediction_offset, pred_end), prediction, label="Prediction")
-    else:
-        idx = f"{idx}: Prediction failed (malformed output)"
+    for i, (pred, succ) in enumerate(zip(predictions, successes)):
+        if succ and pred is not None:
+            pred_end = prediction_offset + len(pred)
+            plt.plot(
+                range(prediction_offset, pred_end),
+                pred,
+                label=f"Prediction {i+1}",
+                linestyle="--",
+                linewidth=1.5,
+                alpha=0.8
+            )
+        else:
+            # Optionally, mark failed predictions
+            plt.axvline(prediction_offset, color='red', linestyle=':', alpha=0.5, label=f"Prediction {i+1} Failed")
 
-    # Add labels and title
     plt.xlabel("Sample (-)")
     plt.ylabel("Amplitude (-)")
     plt.title(str(idx))
@@ -110,6 +134,7 @@ def plot_series(series, reconstruction, prediction, success, output_folder, pred
 
     # Save and close
     path = f"{output_folder}/plot_{idx}.png"
+
     plt.xlim(0, max_len)
     plt.savefig(path)
     plt.close()
@@ -163,17 +188,19 @@ class ResultRecorder:
         rows = []
         meta = self.flatten_config(cfg)
         for entry in results:
-            # For each metric in the result
-            for metric_name, metric_value in entry['metrics'].items():
-                row = {
-                    **meta,
-                    "series_id": entry['id'],
-                    "metric_name": metric_name,
-                    "metric_value": metric_value
-                }
-                rows.append(row)
+            # For each prediction in the result
+            for pred_idx, prediction in enumerate(entry.get("predictions", [])):
+                for metric_name, metric_value in prediction["metrics"].items():
+                    row = {
+                        **meta,
+                        "series_id": entry['id'],
+                        "prediction_index": pred_idx,
+                        "metric_name": metric_name,
+                        "metric_value": metric_value
+                    }
+                    rows.append(row)
 
-        # Append to or create the CSV
+        # Append to or create the TSV
         df = pd.DataFrame(rows)
         output_file = self.out_dir / output_file
         if Path(output_file).exists():
@@ -182,6 +209,7 @@ class ResultRecorder:
             df.to_csv(output_file, sep="\t", mode="w", index=False, header=True)
         
         fix_output_ownership(self.out_dir)
+
 
     def record_jsonl(self, result: dict) -> None:
         with open(self.jsonl_path, "a") as f:

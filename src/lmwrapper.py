@@ -14,14 +14,15 @@ class LMWrapper:
     def __init__(self, 
                  checkpoint: str,
                  device: str = None,
-                 max_new_tokens: int = 250,
+                 max_new_tokens: int = 500,
                  temperature: float = 1.0,
                  top_p: float = 0.9,
                  use_auth_token: bool = False,
                  access_token: str = None,
                  truncate_if_exceeds: bool = True,
                  do_sample: bool = False,
-                 repetition_penalty: float = 1.0):
+                 repetition_penalty: float = 1.0,
+                 num_return_sequences: int = 1):
         
         if use_auth_token:
             access_token = access_token or os.getenv("HF_ACCESS_TOKEN", None)
@@ -36,6 +37,7 @@ class LMWrapper:
         self.truncate_if_exceeds = truncate_if_exceeds
         self.do_sample = do_sample
         self.repetition_penalty = repetition_penalty
+        self.num_return_sequences = num_return_sequences
 
         self.tokenizer = AutoTokenizer.from_pretrained(
             checkpoint,
@@ -60,11 +62,24 @@ class LMWrapper:
 
         self.precision = str(next(self.model.parameters()).dtype)
 
+    def visualize_tokenizer(self, text: str):
+        """
+        Prints a visualization of how the tokenizer splits the input text.
+        """
+        enc = self.tokenizer(text, return_tensors="pt", add_special_tokens=False)
+        tokens = self.tokenizer.convert_ids_to_tokens(enc['input_ids'][0])
+        token_ids = enc['input_ids'][0].tolist()
+        print(f"{'Token':25} {'Token ID':10} {'Decoded String'}")
+        print('-' * 60)
+        for t, tid in zip(tokens, token_ids):
+            piece = self.tokenizer.decode([tid])
+            print(f"{t:25} {tid:<10} {repr(piece)}")
+
     def get_context_window(self) -> int:
         return self.context_window
 
     @torch.no_grad()
-    def generate_response(self, prompt: str, separator: str) -> str:
+    def generate_response(self, prompt: str) -> str:
         try:
             if self.is_instruct:
                 messages = [{"role": "user", "content": prompt}]
@@ -77,8 +92,8 @@ class LMWrapper:
                 max_length=self.context_window - self.max_new_tokens if self.context_window else None,
             ).to(self.model.device)
 
-            # Define allowed tokens: digits, separator, space, dash, and any known numeric tokens up to 1000
-            allowed_tokens = set("0123456789" + separator + " -" + prompt)
+            # Define allowed tokens: digits and the prompt.
+            allowed_tokens = set("0123456789" + prompt)
 
             # Add number strings that are single tokens (like "259", "1000") — only if tokenizer treats them as one token
             for i in range(10000):
@@ -110,7 +125,8 @@ class LMWrapper:
                     do_sample=self.do_sample,
                     repetition_penalty=self.repetition_penalty,
                     bad_words_ids=bad_token_ids,
-                    renormalize_logits=True
+                    renormalize_logits=True,
+                    num_return_sequences=self.num_return_sequences
                 )
 
             predictions = self.tokenizer.batch_decode(
@@ -118,7 +134,7 @@ class LMWrapper:
                 skip_special_tokens=True
             )
 
-            return predictions[0]
+            return predictions
 
         except (torch.cuda.OutOfMemoryError, RuntimeError) as err:
             if "out of memory" not in str(err).lower():
@@ -136,7 +152,6 @@ MODEL_REGISTRY = {
     "smollm2-360m": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM2-360M", **kwargs),
     "smollm2-135m-instruct": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM2-135M-Instruct", **kwargs),
     "smollm2-135m": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM2-135M", **kwargs),
-
     "smollm-1.7b-instruct": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM-1.7B-Instruct", **kwargs),
     "smollm-1.7b": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM-1.7B", **kwargs),
     "smollm-360m-instruct": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM-360M-Instruct", **kwargs),

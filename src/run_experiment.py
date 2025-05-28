@@ -75,43 +75,53 @@ class SeriesProcessor:
 
         # --- LLM interaction -----------------------------------------
         start = time.perf_counter()
-        generated = self.model.generate_response(data_string, self.preprocessor.time_seperator)
+        generated_list = self.model.generate_response(data_string)
         latency = time.perf_counter() - start
 
-        # --- decode prediction ---------------------------------------
-        predicted, pred_success = inverse_transform_safe(self.preprocessor, generated)
+        # --- decode predictions --------------------------------------
+        prediction_results = []
+        for generated in generated_list:
+            predicted, pred_success = inverse_transform_safe(self.preprocessor, generated)
 
-        # --- metrics --------------------------------------------------
-        analysis_result: dict = {}
-        if pred_success:
-            true_seg = ts_data[len(ts_data_split) : len(ts_data_split) + len(predicted)]
-            min_len = min(len(true_seg), len(predicted))
-            true_seg = true_seg[:min_len]
-            predicted = predicted[:min_len]
-            for a in self.analyzers:
-                if ts_seasonality:
-                    analysis = a.Analyze(true_seg, predicted, ts_data_split, ts_seasonality)
-                    analysis_result[a.AnalyzerType] = analysis
-                else:
-                    analysis_result[a.AnalyzerType] = a.Analyze(true_seg, predicted)
-        else:
-            analysis_result["Malformed output"] = 0.0
+            # --- metrics ----------------------------------------------
+            analysis_result: dict = {}
+            if pred_success:
+                true_seg = ts_data[len(ts_data_split) : len(ts_data_split) + len(predicted)]
+                min_len = min(len(true_seg), len(predicted))
+                true_seg = true_seg[:min_len]
+                predicted_trimmed = predicted[:min_len]
+                for a in self.analyzers:
+                    if ts_seasonality:
+                        analysis = a.Analyze(true_seg, predicted_trimmed, ts_data_split, ts_seasonality)
+                        analysis_result[a.AnalyzerType] = analysis
+                    else:
+                        analysis_result[a.AnalyzerType] = a.Analyze(true_seg, predicted_trimmed)
+            else:
+                analysis_result["Malformed output"] = 0.0
 
+            prediction_results.append({
+                "generated_string": generated,
+                "inverse_success": pred_success,
+                "predicted": safe_to_list(predicted),
+                "metrics": analysis_result,
+            })
+
+        # --- assemble return dict -------------------------------------
         return {
             "id": ts_name,
-            "inverse_success": pred_success,
+            "latency": {
+                "total_seconds": latency,
+                "num_predictions": len(generated_list)
+            },
             "data": {
                 "original": safe_to_list(ts_data),
                 "original_split": safe_to_list(ts_data_split),
                 "reconstructed_split": safe_to_list(reconstructed),
-                "predicted": safe_to_list(predicted),
             },
+            "predictions": prediction_results,
             "model": {
                 "original_string": data_string,
-                "generated": generated,
-                "latency": latency,
-            },
-            "metrics": analysis_result,
+            }
         }
 
 # ---------------------------------------------------------------------
@@ -139,14 +149,17 @@ class ExperimentRunner:
             outcome = self.processor(series)
 
             # plot ----------------------------------------------------
+            predictions = [p["predicted"] for p in outcome["predictions"]]
+            successes = [p["inverse_success"] for p in outcome["predictions"]]
             ts_plot_path = plot_series(
                 series,
                 outcome["data"]["reconstructed_split"],
-                outcome["data"]["predicted"],
-                outcome["inverse_success"],
+                predictions,
+                successes,
                 str(self.out_dir),
                 prediction_offset=len(outcome["data"]["original_split"]),
             )
+
             outcome["plot_path"] = ts_plot_path
             self.recorder.record_jsonl(outcome)
             results.append(outcome)

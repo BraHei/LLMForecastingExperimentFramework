@@ -16,7 +16,7 @@ def extract_model_name(config_path):
 
 def get_dynamic_group_columns(df, always_include=["experiment_name", "model_name"]):
     exclude = set([
-        "experiment_name", "metric_name", "metric_value", "dataset_name", "series_id",
+        "experiment_name", "metric_name", "metric_value", "dataset_name", "prediction_index",
         "input_data_length", "input_data_factor", "device", "max_new_tokens", "top_p", "do_sample"
     ])
     candidates = [col for col in df.columns if col not in exclude and col not in always_include]
@@ -44,61 +44,85 @@ def read_experiment_tsv(input_path):
     print(f"Reading TSV: {tsv_path.resolve()}")
     return pd.read_csv(tsv_path, sep="\t", skipinitialspace=False)
 
-def group_median_na_if_any_na(df, group_cols):
-    # Custom aggregation function: returns NA if any NA, else median
+def group_mean_na_if_any_na(df, group_cols):
+    # Returns NA if any NA in the group, otherwise mean and spread (std)
+    def mean_or_na(series):
+        if series.isna().any():
+            return pd.NA
+        return series.mean()
+    def spread(series):
+        return series.dropna().std()
+    result = (
+        df.groupby(group_cols, dropna=False)["metric_value"]
+          .agg(mean_value=mean_or_na, spread=spread)
+          .reset_index()
+    )
+    return result
+
+def group_median_na_if_any_na_with_spread(df, group_cols, value_col="mean_value"):
+    # Returns NA for median if any NA in group, std as spread (ignoring NAs)
     def median_or_na(series):
         if series.isna().any():
             return pd.NA
         return series.median()
-
-    return (
-        df.groupby(group_cols, dropna=False)["metric_value"]
-        .agg(median_or_na)
-        .reset_index()
-    )
+    def spread(series):
+        return series.dropna().std()
+    grouped = df.groupby(group_cols, dropna=False)[value_col]
+    summary = grouped.agg(
+        median=median_or_na,
+        spread=spread
+    ).reset_index()
+    return summary
 
 def summarize_metrics_df(df, out_dir, suffix="", subfolder=None):
     """
-    Perform summary analysis (median metrics per measurement),
-    saving results sorted by lowest median first **and** a wide table
-    that ends with a “Median” row.
+    Aggregates per measurement (series_id) with mean, then
+    aggregates per config with median/spread (strict NA rules).
+    Outputs both per-run and per-group summaries, plus wide table.
     """
     if subfolder:
         out_dir = out_dir / subfolder
         out_dir.mkdir(parents=True, exist_ok=True)
 
-    group_cols = get_dynamic_group_columns(df)
+    # --- Per-measurement mean (over predictions per series) ---
+    # Grouping: config columns + series_id
+    per_run_group_cols = get_dynamic_group_columns(df)
+    per_run_summary = group_mean_na_if_any_na(df, per_run_group_cols)
+    per_run_summary.to_csv(out_dir / f"metric_per_run{suffix}.tsv", sep="\t", index=False)
+    print(f"Saved metric per run (with mean) to {out_dir / f'metric_per_run{suffix}.tsv'}")
 
-    # Medians
-    medians_numeric = group_median_na_if_any_na(df, group_cols)
-    median_map      = (medians_numeric
-                       .set_index("experiment_name")["metric_value"]
-                       .to_dict())   
-    medians_pretty = (
-        medians_numeric
-        .sort_values("metric_value", ascending=True)
-        .astype("object")
-        .map(lambda x: f"{x:.2f}" if pd.notna(x) and isinstance(x, (float, int)) else x)
+    # --- Per-config median/spread (across series/runs) ---
+    # Grouping: config columns (no series_id or prediction_index)
+    per_group_cols = [c for c in per_run_group_cols if c not in ("series_id", "prediction_index")]
+    per_group_summary = group_median_na_if_any_na_with_spread(
+        per_run_summary, per_group_cols, value_col="mean_value"
     )
-    medians_pretty.to_csv(out_dir / f"median_per_measurement{suffix}.tsv",
-                          sep="\t", index=False)
-    print(f"Saved median per measurement to {out_dir / f'median_per_measurement{suffix}.tsv'}")
+    per_group_summary.to_csv(out_dir / f"metric_per_config{suffix}.tsv", sep="\t", index=False)
+    print(f"Saved metric per config (median/spread) to {out_dir / f'metric_per_config{suffix}.tsv'}")
 
-    # Summary
-    index      = ["series_id"]
-    col_index  = [c for c in group_cols if c != "series_id"]
-    pivot = df.pivot_table(index=index, columns=col_index, values="metric_value")
+    # --- Wide summary table (rows: series_id, cols: config columns), median and spread at the bottom ---
+    index = ["series_id"]
+    col_index = [c for c in per_run_group_cols if c not in index]
+    pivot = per_run_summary.pivot_table(index=index, columns=col_index, values="mean_value")
+
+    # Median row: strict NA logic (NA if any in col)
     median_row = [
-        median_map.get(exp_name, pd.NA)
-        for exp_name in pivot.columns.get_level_values(0)
+        pd.NA if col_series.isna().any() else col_series.median()
+        for _, col_series in pivot.items()
     ]
-    pivot.loc["Median"] = median_row 
-    fmt = lambda x: f"{x:.2f}" if pd.notna(x) and isinstance(x, (float, int)) else x
-    pivot = pivot.astype("object").map(fmt)
+    # Spread row: std, skipna
+    spread_row = [
+        col_series.dropna().std()
+        for _, col_series in pivot.items()
+    ]
+    pivot.loc["Median"] = median_row
+    pivot.loc["Spread"] = spread_row
 
+    # Pretty format numbers
+    fmt = lambda x: f"{x:.4f}" if pd.notna(x) and isinstance(x, (float, int)) else x
+    pivot = pivot.astype("object").map(fmt)
     pivot.to_csv(out_dir / f"metric_summary_wide{suffix}.tsv", sep="\t")
     print(f"Saved wide metric summary to {out_dir / f'metric_summary_wide{suffix}.tsv'}")
-
 
 def summarize_metrics_table(tsv_path, out_dir, comparison_metric="seasonalMeanAbsoluteScaledError", model_specific=False):
     df = read_experiment_tsv(tsv_path)
@@ -127,42 +151,6 @@ def summarize_metrics_table(tsv_path, out_dir, comparison_metric="seasonalMeanAb
             summarize_metrics_df(model_df, out_dir, suffix="", subfolder=f"model_{model}")
     else:
         summarize_metrics_df(summary_df, out_dir, suffix="", subfolder="global")
-
-
-def collect_and_merge_model_responses(parent_folder):
-    parent_folder = Path(parent_folder)
-    model_folders = [f for f in parent_folder.iterdir() if f.is_dir() and (f / "model_responses.jsonl").exists()]
-    all_rows = []
-    for folder in model_folders:
-        # Try to get context from config
-        config_path = folder / "experiment_config.yaml"
-        config = {}
-        if config_path.exists():
-            try:
-                with open(config_path, "r") as f:
-                    config = yaml.safe_load(f)
-            except Exception as ex:
-                print(f"Could not load config: {ex}")
-
-        responses_path = folder / "model_responses.jsonl"
-        with open(responses_path, "r") as fin:
-            for line in fin:
-                row = json.loads(line)
-                # Get model_name and dataset_name from config if not present
-                row["model_name"] = config.get("model_name", folder.name)
-                # Will try to get dataset_name from config or row
-                if "dataset_name" not in row:
-                    # From config (if dataset_names is a list, match id, else just use)
-                    ds = config.get("dataset_name")
-                    ds_list = config.get("dataset_params", {}).get("dataset_names")
-                    row["dataset_name"] = ds if ds else (ds_list[0] if isinstance(ds_list, list) else ds_list)
-                # For clarity, store which folder/run this was from
-                row["_run_dir"] = folder.name
-                all_rows.append(row)
-    if not all_rows:
-        raise ValueError("No model_responses.jsonl rows found in any subfolder!")
-    df = pd.DataFrame(all_rows)
-    return df
 
 def plot_predictions_across_models(base_folder, output_folder):
     base_path = Path(base_folder)
