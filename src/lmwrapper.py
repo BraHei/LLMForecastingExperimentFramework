@@ -132,6 +132,15 @@ MODEL_REGISTRY = {
     "llama3.1-8b": lambda **kwargs: LMWrapper(checkpoint="meta-llama/Meta-Llama-3.1-8B", **kwargs),
     "smollm2-1.7b-instruct": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM2-1.7B-Instruct", **kwargs),
     "smollm2-1.7b": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM2-1.7B", **kwargs),
+    "smollm2-360m-instruct": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM2-360M-Instruct", **kwargs),
+    "smollm2-360m": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM2-360M", **kwargs),
     "smollm2-135m-instruct": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM2-135M-Instruct", **kwargs),
     "smollm2-135m": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM2-135M", **kwargs),
+
+    "smollm-1.7b-instruct": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM-1.7B-Instruct", **kwargs),
+    "smollm-1.7b": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM-1.7B", **kwargs),
+    "smollm-360m-instruct": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM-360M-Instruct", **kwargs),
+    "smollm-360m": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM-360M", **kwargs),
+    "smollm-135m-instruct": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM-135M-Instruct", **kwargs),
+    "smollm-135m": lambda **kwargs: LMWrapper(checkpoint="HuggingFaceTB/SmolLM-135M", **kwargs),
 }
