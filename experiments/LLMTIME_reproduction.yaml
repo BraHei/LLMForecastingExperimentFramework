@@ -1,13 +1,17 @@
 model_name_grid:
   - distilgpt2-88m
   - smollm2-135m
+  - smollm2-360m
+  - smollm2-1.7b
   - llama3.1-8b
+  - llama3.2-3b
+  - llama3.2-1b
 
 model_parameters:
-  max_new_tokens: 150
   temperature: 1.0
   top_p: 0.9
   do_sample: true
+  num_return_sequences: 5
 
 dataset_name: "darts"
 dataset_params:

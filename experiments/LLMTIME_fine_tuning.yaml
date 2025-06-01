@@ -1,4 +1,11 @@
-model_name: distilgpt2-88m
+model_name_grid:
+  # - distilgpt2-88m
+  # - smollm2-135m
+  # - smollm2-360m
+  # - llama3.2-1b
+  - smollm2-1.7b
+  - llama3.1-8b
+  - llama3.2-3b
 
 model_parameters_grid:
   temperature: [0.25, 0.5, 0.75, 1.0]
@@ -14,14 +21,11 @@ preprocessor_params_grid:
   alpha: [0.5, 0.9, 0.99]
   beta: [0.0, 0.3]
   base: [10]
-  prec: [2]
-  bit_sep: 
-    - ''
+  prec: [2, 3]
   time_sep:
     - ','
-    - '-'
 
 input_data_factor: 0.8
-output_dir: 'results/LLMTIME_distil_grid_parameters'
+output_dir: 'results/LLMTIME_fine_tuning'
 output_jsonl: "model_responses.jsonl"
 data_analyzers: [MAE, MSE, MASE]

@@ -20,7 +20,7 @@
             "module": "src.multirun_experiment",
             "args": [
                 "--config",
-                "experiments/LLMTIME_distil_parameters_trail.yaml",
+                "experiments/LLMTIME_smoll_instruction.yaml",
             ],
             "console": "integratedTerminal",
             "justMyCode": false,
@@ -45,7 +45,7 @@
             "module": "src.create_tables_and_plots",
             "args": [
                 "--input_folder",
-                "results/Darts_baseline",
+                "./results/LLMTIME_test/",
                 "--summarize"
             ],
             "console": "integratedTerminal",
