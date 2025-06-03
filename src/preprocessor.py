@@ -47,50 +47,62 @@ class BaseTimeSeriesPreprocessor(ABC):
         self.encoder = encoder
         print(f"Encoder loaded from {filepath}")
 
+
+ABBA_SYMBOL_LISTS= {
+    "AlphabetAa": ['A', 'a', 'B', 'b', 'C', 'c', 'D', 'd', 'E', 'e',
+                     'F', 'f', 'G', 'g', 'H', 'h', 'I', 'i', 'J', 'j',
+                     'K', 'k', 'L', 'l', 'M', 'm', 'N', 'n', 'O', 'o',
+                     'P', 'p', 'Q', 'q', 'R', 'r', 'S', 's', 'T', 't',
+                     'U', 'u', 'V', 'v', 'W', 'w', 'X', 'x', 'Y', 'y', 'Z', 'z'],
+    "Alphabetab": ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+                     'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
+                     'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+                     'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
+                     'W', 'X', 'Y', 'Z'],
+    "AlphabetAB": ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+                     'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+                     'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
+                     'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+                     'w', 'x', 'y', 'z'],
+    "Numbers": [str(i) for i in range(101)],
+    "Specials": [
+        '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/',
+        ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~',
+        '§', '©', '®', '°', '±', '²', '³', '¼', '½', '¾',
+        '¿', '¡', '¤', '¥', '¢', '€', '£', '₤', '₿', 'ƒ',
+        '×', '÷', '∑', '∏', '√', '∞', '∫', '≈', '≠', '≤',
+        '≥', '∂', '∇', '∴', '∵',
+        '─', '━', '│', '┃', '┌', '┐', '└', '┘',
+        '•', '‣', '◦', '‧', '▪', '▫', '―', '–', '—', '…', '„', '”',
+        '←', '→', '↑', '↓', '↔', '↕', '⇒', '⇔', '⇑', '⇓', '➔', '➤',
+        '$', '€', '£', '¥', '₽', '₹',
+        '♥', '★', '✓', '✔', '✖',
+        '♠', '♣', '♦', '♯', '♭', '♪'
+    ]
+}
+
+
 class LLMABBAPreprocessor(BaseTimeSeriesPreprocessor):
-    def __init__(self, **encoder_params):
+    def __init__(self, seperator = ',', alphabet_set = "AlphabetAa", **encoder_params):
         super().__init__()
         self.preprocessor_type = "LLM-ABBA"
+        self.seperator = seperator
         self.encoder_params = encoder_params
 
-    def filter_symbols(self, encoded_string):
-        allowed_set = set(self.encoder.string_[0])
-        symbol_list = list(encoded_string)
-        return [char for char in symbol_list if char in allowed_set]
+        updated_set = ABBA_SYMBOL_LISTS[alphabet_set]
+        if seperator in updated_set:
+            updated_set.remove(seperator)
+        self.encoder_params[alphabet_set] = seperator
 
     def encode(self, time_series):
         time_series = np.asarray(time_series)
         self.encoder = LLMABBA(**self.encoder_params)
         encoded_array = self.encoder.encode([time_series.tolist()])[0]
-        return ''.join(encoded_array)
+        return self.seperator.join(encoded_array)
 
     def decode(self, encoded_string):
         if self.encoder is not None:
-            filtered_list = self.filter_symbols(encoded_string)
-            if (len(list(encoded_string)) != len(filtered_list)):
-                print("WARNING: encoded string has reduced symbols")
-            responds = self.encoder.decode([filtered_list])
-            return responds[0]
-        else:
-            raise ValueError("Decoder requires a previously fitted encoder.")
-
-# Can be improved later on for parallel processing
-class LLMABBAEncoderSpaced(BaseTimeSeriesPreprocessor):
-    def __init__(self, **encoder_params):
-        super().__init__()
-        self.preprocessor = "LLM-ABBA"
-        self.encoder_params = encoder_params
-
-    def encode(self, time_series):
-        time_series = np.asarray(time_series)
-
-        self.encoder = LLMABBA(**self.encoder_params)
-        encoded_array = self.encoder.encode([time_series.tolist()])[0]
-        return ' '.join(encoded_array)
-
-    def decode(self, encoded_string):
-        if self.encoder is not None:
-            symbol_list = list(encoded_string.replace(" ", ""))
+            symbol_list = list(encoded_string.replace(self.seperator, ""))
             responds = self.encoder.decode([symbol_list])
             return responds[0]
         else:
@@ -140,6 +152,5 @@ class LLMTimePreprocessor(BaseTimeSeriesPreprocessor):
 
 PREPROCESSOR_REGISTRY = {
     "LLM-ABBA": LLMABBAPreprocessor,
-    "LLM-ABBA_SPACED": LLMABBAEncoderSpaced,
     "LLMTime": LLMTimePreprocessor,
 }

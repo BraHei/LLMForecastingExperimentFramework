@@ -93,14 +93,17 @@ class LMWrapper:
             ).to(self.model.device)
 
             # Define allowed tokens: digits and the prompt.
-            allowed_tokens = set("0123456789" + prompt)
+            allowed_tokens = set(prompt)
 
-            # Add number strings that are single tokens (like "259", "1000") — only if tokenizer treats them as one token
-            for i in range(10000):
-                s = str(i)
-                token_ids = self.tokenizer(s, add_special_tokens=False)["input_ids"]
-                if len(token_ids) == 1:
-                    allowed_tokens.add(s)
+            # If prompt contains a digit, make sure to add them all
+            if (any(char.isdigit() for char in prompt)):
+                allowed_tokens.update(set("0123456789"))
+                # Add number strings that are single tokens (like "259", "1000") — only if tokenizer treats them as one token
+                for i in range(10000):
+                    s = str(i)
+                    token_ids = self.tokenizer(s, add_special_tokens=False)["input_ids"]
+                    if len(token_ids) == 1:
+                        allowed_tokens.add(s)
 
             # Convert allowed tokens into token IDs
             allowed_token_ids = set()

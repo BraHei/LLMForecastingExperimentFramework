@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import json
 import time
 from pathlib import Path
-from typing import Iterable, List
+from typing import List
 
 from src.config import ExperimentConfig, load_config
 from src.experiment_utils import (
