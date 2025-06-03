@@ -20,7 +20,7 @@
             "module": "src.multirun_experiment",
             "args": [
                 "--config",
-                "experiments/LLMTIME_smoll_instruction.yaml",
+                "experiments/llmabba/LLMABBA_smoll135.yaml",
             ],
             "console": "integratedTerminal",
             "justMyCode": false,
