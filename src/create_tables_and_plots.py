@@ -9,6 +9,8 @@ import yaml
 
 from src.experiment_utils import fix_output_ownership
 
+fmt = lambda x: f"{x:.2f}" if pd.notna(x) and isinstance(x, float) else x
+
 def extract_model_name(config_path):
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
@@ -88,7 +90,8 @@ def summarize_metrics_df(df, out_dir, suffix="", subfolder=None):
     # Grouping: config columns + series_id
     per_run_group_cols = get_dynamic_group_columns(df)
     per_run_summary = group_mean_na_if_any_na(df, per_run_group_cols)
-    per_run_summary.to_csv(out_dir / f"metric_per_run{suffix}.tsv", sep="\t", index=False)
+    per_run_summary_formated = per_run_summary.map(fmt)
+    per_run_summary_formated.to_csv(out_dir / f"metric_per_run{suffix}.tsv", sep="\t", index=False)
     print(f"Saved metric per run (with mean) to {out_dir / f'metric_per_run{suffix}.tsv'}")
 
     # --- Per-config median/spread (across series/runs) ---
@@ -96,8 +99,9 @@ def summarize_metrics_df(df, out_dir, suffix="", subfolder=None):
     per_group_cols = [c for c in per_run_group_cols if c not in ("series_id", "prediction_index")]
     per_group_summary = group_median_na_if_any_na_with_spread(
         per_run_summary, per_group_cols, value_col="mean_value"
-    )
-    per_group_summary.to_csv(out_dir / f"metric_per_config{suffix}.tsv", sep="\t", index=False)
+    ).map(fmt)
+    per_group_summary_formated = per_group_summary.map(fmt)
+    per_group_summary_formated.to_csv(out_dir / f"metric_per_config{suffix}.tsv", sep="\t", index=False)
     print(f"Saved metric per config (median/spread) to {out_dir / f'metric_per_config{suffix}.tsv'}")
 
     # --- Wide summary table (rows: series_id, cols: config columns), median and spread at the bottom ---
@@ -119,7 +123,6 @@ def summarize_metrics_df(df, out_dir, suffix="", subfolder=None):
     pivot.loc["Spread"] = spread_row
 
     # Pretty format numbers
-    fmt = lambda x: f"{x:.4f}" if pd.notna(x) and isinstance(x, (float, int)) else x
     pivot = pivot.astype("object").map(fmt)
     pivot.to_csv(out_dir / f"metric_summary_wide{suffix}.tsv", sep="\t")
     print(f"Saved wide metric summary to {out_dir / f'metric_summary_wide{suffix}.tsv'}")
