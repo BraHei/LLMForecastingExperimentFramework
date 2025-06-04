@@ -24,18 +24,24 @@ from src.data_analyzers import DATA_ANALYZER_REGISTRY
 class SeriesProcessor:
     """Turns one time-series into (recon, pred, metrics)."""
 
-    def __init__(self, cfg: ExperimentConfig):
+    def __init__(self, cfg: ExperimentConfig, preloaded_model = None):
         self.cfg = cfg
         self.preprocessor = build(
             cfg.preprocessor_name,
             PREPROCESSOR_REGISTRY,
             **cfg.preprocessor_params
         )
-        self.model = build(
-            cfg.model_name,
-            MODEL_REGISTRY,
-            **cfg.model_parameters
-        )
+
+        if (preloaded_model is None):
+            self.model = build(
+                cfg.model_name,
+                MODEL_REGISTRY,
+                **cfg.model_parameters
+            )
+        else:
+            preloaded_model.update_parameters(**cfg.model_parameters)
+            self.model = preloaded_model
+        
         self.analyzers = [build(name, DATA_ANALYZER_REGISTRY) for name in cfg.data_analyzers]
 
     # --------------------------------------------------------------
@@ -47,12 +53,12 @@ class SeriesProcessor:
 
         # --- split data ---------------------------------------------
         if self.cfg.input_data_length is not None:
-            ts_data_split = ts_data[: self.cfg.input_data_length]
+            ts_train = ts_data[: self.cfg.input_data_length]
         else:
-            ts_data_split = split_data(ts_data, self.cfg.input_data_factor)
+            ts_train = split_data(ts_data, self.cfg.input_data_factor)
 
         # --- encode --------------------------------------------------
-        data_string = self.preprocessor.encode(ts_data_split)
+        data_string = self.preprocessor.encode(ts_train)
 
         # --- reconstruct ---------------------------------------------
         reconstructed, _ = inverse_transform_safe(self.preprocessor, data_string)
@@ -64,9 +70,9 @@ class SeriesProcessor:
                 formatted = instr_text.format(
                     timeseries_name=ts_name,
                     input_data=data_string,
-                    input_length=len(ts_data_split),
+                    input_length=len(ts_train),
                     total_length=len(ts_data),
-                    forecast_lenght=len(ts_data) - len(ts_data_split)
+                    forecast_lenght=len(ts_data) - len(ts_train)
                 )
             except KeyError:
                 formatted = instr_text + data_string
@@ -85,16 +91,16 @@ class SeriesProcessor:
             # --- metrics ----------------------------------------------
             analysis_result: dict = {}
             if pred_success:
-                true_seg = ts_data[len(ts_data_split) : len(ts_data_split) + len(predicted)]
-                min_len = min(len(true_seg), len(predicted))
-                true_seg = true_seg[:min_len]
+                ts_test = ts_data[len(ts_train) : len(ts_train) + len(predicted)]
+                min_len = min(len(ts_test), len(predicted))
+                ts_test = ts_test[:min_len]
                 predicted_trimmed = predicted[:min_len]
                 for a in self.analyzers:
                     if ts_seasonality:
-                        analysis = a.Analyze(true_seg, predicted_trimmed, ts_data_split, ts_seasonality)
+                        analysis = a.Analyze(ts_test, predicted_trimmed, ts_train, ts_seasonality)
                         analysis_result[a.AnalyzerType] = analysis
                     else:
-                        analysis_result[a.AnalyzerType] = a.Analyze(true_seg, predicted_trimmed)
+                        analysis_result[a.AnalyzerType] = a.Analyze(ts_test, predicted_trimmed)
             else:
                 analysis_result["Malformed output"] = 0.0
 
@@ -114,8 +120,9 @@ class SeriesProcessor:
             },
             "data": {
                 "original": safe_to_list(ts_data),
-                "original_split": safe_to_list(ts_data_split),
-                "reconstructed_split": safe_to_list(reconstructed),
+                "train": safe_to_list(ts_train),
+                "reconstructed_train": safe_to_list(reconstructed),
+                "test": safe_to_list(ts_test),
             },
             "predictions": prediction_results,
             "model": {
@@ -125,11 +132,11 @@ class SeriesProcessor:
 
 # ---------------------------------------------------------------------
 class ExperimentRunner:
-    def __init__(self, cfg: ExperimentConfig):
+    def __init__(self, cfg: ExperimentConfig, preloaded_model = None):
         self.cfg = cfg
         self.name = cfg.experiment_name
         self.out_dir = Path(cfg.output_dir)
-        self.processor = SeriesProcessor(cfg)
+        self.processor = SeriesProcessor(cfg, preloaded_model)
         self.jsonl_filename = cfg.extra.get("output_jsonl", "results.jsonl")
         self.recorder = ResultRecorder(self.out_dir, self.jsonl_filename)
 
@@ -152,11 +159,11 @@ class ExperimentRunner:
             successes = [p["inverse_success"] for p in outcome["predictions"]]
             ts_plot_path = plot_series(
                 series,
-                outcome["data"]["reconstructed_split"],
+                outcome["data"]["reconstructed_train"],
                 predictions,
                 successes,
                 str(self.out_dir),
-                prediction_offset=len(outcome["data"]["original_split"]),
+                prediction_offset=len(outcome["data"]["train"]),
             )
 
             outcome["plot_path"] = ts_plot_path

@@ -4,13 +4,13 @@ model_name_grid:
   - smollm2-360m
   - llama3.2-1b
   - smollm2-1.7b
-  - llama3.1-8b
   - llama3.2-3b
+  - llama3.1-8b
 
 model_parameters_grid:
   temperature: [0.25, 0.5, 0.75, 1.0]
   do_sample: [true]
-  num_return_sequences: [5]
+  num_return_sequences: [10]
 
 dataset_name: "darts"
 dataset_params:
@@ -22,8 +22,6 @@ preprocessor_params_grid:
   beta: [0.0, 0.3]
   base: [10]
   prec: [2, 3]
-  time_sep:
-    - ','
 
 input_data_factor: 0.8
 output_dir: 'results/LLMTIME_fine_tuning'

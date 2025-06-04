@@ -11,7 +11,7 @@ model_parameters:
   temperature: 1.0
   top_p: 0.9
   do_sample: true
-  num_return_sequences: 5
+  num_return_sequences: 10
 
 dataset_name: "darts"
 dataset_params:

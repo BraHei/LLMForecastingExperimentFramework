@@ -1,12 +1,10 @@
 from itertools import product
 import argparse
 import gc
-import torch
 from copy import deepcopy
 from pathlib import Path
 from src.config import load_config
 from src.run_experiment import ExperimentRunner
-from typing import List, Optional
 from src.experiment_utils import ResultRecorder, fix_output_ownership
 from itertools import product
 from dataclasses import asdict
@@ -46,22 +44,28 @@ def run_grid(cfg_path: str | Path):
     # Always: flip flag on for naming
     base_cfg.build_experiment_name_flag = True
 
+    previous_model = None
+    previous_alias = ""
     # --- Sweep over product of axes ---
     for run_idx, values in enumerate(product(*sweep_axes.values()), start=1):
         sub_cfg = deepcopy(base_cfg)
+        
         for key, val in zip(sweep_axes.keys(), values):
             if val is not None:
                 setattr(sub_cfg, key, val)
+        
         sub_cfg.__post_init__()
         print(f"[{run_idx}] → {sub_cfg.output_dir}")
         sub_cfg.save()
-        runner = ExperimentRunner(sub_cfg)
+        
+        if previous_alias is not sub_cfg.model_name:
+            previous_model = None
+            gc.collect()
+        
+        runner = ExperimentRunner(sub_cfg, previous_model)
         recorder.record_results_to_table(runner.run(), sub_cfg)
-        del runner.processor.model
-        torch.cuda.empty_cache()
-        gc.collect()
-
-    fix_output_ownership(Path(base_cfg.output_dir))
+        previous_alias = sub_cfg.model_name
+        previous_model = runner.processor.model    
 
 def main():
     parser = argparse.ArgumentParser(

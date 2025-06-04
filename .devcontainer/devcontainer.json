@@ -6,7 +6,7 @@
   "service": "dev-gpu",
   "workspaceFolder": "/workspace",
   "runServices": ["dev-gpu"],
-  "postCreateCommand": "./.devcontainer/setup.sh",
+  "initializeCommand": "./.devcontainer/setup.sh",
   "mounts": [
     "source=${localWorkspaceFolder},target=/workspace,type=bind"
   ],

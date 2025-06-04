@@ -11,25 +11,28 @@ __all__ = [
 ]
 
 class LMWrapper:
-    def __init__(self, 
-                 checkpoint: str,
-                 device: str = None,
-                 max_new_tokens: int = 500,
-                 temperature: float = 1.0,
-                 top_p: float = 0.9,
-                 use_auth_token: bool = False,
-                 access_token: str = None,
-                 truncate_if_exceeds: bool = True,
-                 do_sample: bool = False,
-                 repetition_penalty: float = 1.0,
-                 num_return_sequences: int = 1):
+    def __init__(self, checkpoint: str, **kwargs):
+        self.checkpoint = checkpoint
+        self.update_parameters(**kwargs)
+        self.load_model()
+
+    def update_parameters(self, 
+                        device: str = None,
+                        max_new_tokens: int = 250,
+                        temperature: float = 1.0,
+                        top_p: float = 0.9,
+                        truncate_if_exceeds: bool = True,
+                        do_sample: bool = False,
+                        repetition_penalty: float = 1.0,
+                        num_return_sequences: int = 1,
+                        use_auth_token: bool = False,
+                        access_token: str = None):
         
         if use_auth_token:
             access_token = access_token or os.getenv("HF_ACCESS_TOKEN", None)
         else:
             access_token = None
 
-        self.checkpoint = checkpoint
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.max_new_tokens = max_new_tokens
         self.temperature = temperature
@@ -38,16 +41,19 @@ class LMWrapper:
         self.do_sample = do_sample
         self.repetition_penalty = repetition_penalty
         self.num_return_sequences = num_return_sequences
+        self.use_auth_token = use_auth_token
+        self.access_token = access_token
 
+    def load_model(self):
         self.tokenizer = AutoTokenizer.from_pretrained(
-            checkpoint,
-            use_auth_token=access_token if use_auth_token else None
+            self.checkpoint,
+            use_auth_token=self.access_token if self.use_auth_token else None
         )
 
         self.model = AutoModelForCausalLM.from_pretrained(
-            checkpoint, 
+            self.checkpoint, 
             torch_dtype=torch.bfloat16,
-            use_auth_token=access_token if use_auth_token else None,
+            use_auth_token=self.access_token if self.use_auth_token else None,
             device_map="auto",
         )
 
@@ -57,7 +63,7 @@ class LMWrapper:
         if self.context_window is None:
             print("Warning: Model context window not found in config.")
 
-        self.is_instruct = (("-instruct" in checkpoint.lower()) and hasattr(self.tokenizer, "apply_chat_template")
+        self.is_instruct = (("-instruct" in self.checkpoint.lower()) and hasattr(self.tokenizer, "apply_chat_template")
         )
 
         self.precision = str(next(self.model.parameters()).dtype)
@@ -80,6 +86,7 @@ class LMWrapper:
 
     @torch.no_grad()
     def generate_response(self, prompt: str) -> str:
+
         try:
             if self.is_instruct:
                 messages = [{"role": "user", "content": prompt}]
