@@ -102,6 +102,7 @@ class SeriesProcessor:
                     else:
                         analysis_result[a.AnalyzerType] = a.Analyze(ts_test, predicted_trimmed)
             else:
+                ts_test = []
                 analysis_result["Malformed output"] = 0.0
 
             prediction_results.append({
