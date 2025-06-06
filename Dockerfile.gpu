@@ -1,4 +1,4 @@
-FROM rocm/pytorch:latest
+FROM rocm/pytorch:rocm6.4_ubuntu24.04_py3.12_pytorch_release_2.6.0
 
 # Prevent Python from writing .pyc files and buffering
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -19,7 +19,7 @@ RUN pip install -r requirements.txt --constraint=torch_version.txt
 # Set working directory
 WORKDIR /workspace
 ENV PYTHONPATH=/workspace
-ENV PYTORCH_HIP_ALLOC_CONF=expandable_segments:True
+ENV PYTORCH_HIP_ALLOC_CONF=expandable_segments:True,garbage_collection_threshold:0.9,max_split_size_mb:512
 ENV MPLBACKEND=Agg
 
 # Default command (optional override via `docker run`)
