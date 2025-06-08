@@ -52,53 +52,70 @@ class DartsSeriesProcessor:
 
         # --- split data ----------------------------------------------
         if (self.cfg.input_data_length is not None):
-            ts_data_split = ts_data[:self.cfg.input_data_length]
+            ts_train = ts_data[:self.cfg.input_data_length]
         else:
-            ts_data_split = split_data(ts_data, self.cfg.input_data_factor)
+            ts_train = split_data(ts_data, self.cfg.input_data_factor)
         
         # --- Preperation ---------------------------------------------
-        forecast_len = len(ts_data) - len(ts_data_split)
-        series_train = TimeSeries.from_values(np.array(ts_data_split))
+        forecast_len = len(ts_data) - len(ts_train)
+        series_train = TimeSeries.from_values(np.array(ts_train))
 
         if self.model_name == "NaiveSeasonal":
-            self.model = self.model_builder(len(ts_data_split), K=ts_seasonality, **self.cfg.model_parameters)
+            self.model = self.model_builder(len(ts_train), K=ts_seasonality, **self.cfg.model_parameters)
         else:
-            self.model = self.model_builder(len(ts_data_split), **self.cfg.model_parameters)
+            self.model = self.model_builder(len(ts_train), **self.cfg.model_parameters)
         
         self.model.fit(series_train)
 
         # --- Prediction -----------------------------------------------
-        prediction = self.model.predict(forecast_len)
+        predicted = self.model.predict(forecast_len)
 
         # --- Post Processing ------------------------------------------
-        predicted_vals = prediction.values().flatten().tolist()
-        true_vals = ts_data[-forecast_len:]
-        min_len = min(len(predicted_vals), len(true_vals))
+        predicted_vals = predicted.values().flatten().tolist()
+        ts_test = ts_data[-forecast_len:]
+        min_len = min(len(predicted_vals), len(ts_test))
         predicted_vals = predicted_vals[:min_len]
-        true_vals = true_vals[:min_len]
+        ts_test = ts_test[:min_len]
         
         analysis_result: dict = {}
         for a in self.analyzers:
             if ts_seasonality:
-                analysis = a.Analyze(true_vals, predicted_vals, ts_data_split, ts_seasonality)
+                analysis = a.Analyze(ts_test, predicted_vals, ts_train, ts_seasonality)
                 analysis_result[a.AnalyzerType] = analysis
             else:
-                analysis_result[a.AnalyzerType] = a.Analyze(true_vals, predicted_vals)
+                analysis_result[a.AnalyzerType] = a.Analyze(ts_test, predicted_vals)
+
+        prediction_results = [{
+                "inverse_success": True,
+                "predicted": safe_to_list(predicted_vals),
+                "metrics": analysis_result,
+            }]
 
         return {
-            "id": f"{ts_name}",
-            "inverse_success": True,
+            "id": ts_name,
             "data": {
                 "original": safe_to_list(ts_data),
-                "original_split": safe_to_list(ts_data_split),
-                "reconstructed_split": safe_to_list(ts_data_split),
-                "predicted": safe_to_list(predicted_vals),
+                "train": safe_to_list(ts_train),
+                "train": safe_to_list(ts_train),
+                "test": safe_to_list(ts_test),
             },
-            "model": {
-                "model_name": self.model_name,
-            },
-            "metrics": analysis_result,
+            "predictions": prediction_results
         }
+
+        # return {
+        #     "id": f"{ts_name}",
+        #     "inverse_success": True,
+        #     "data": {
+        #         "original": safe_to_list(ts_data),
+        #         "original_split": safe_to_list(ts_data_split),
+        #         "reconstructed_split": safe_to_list(ts_data_split),
+        #         "predicted": safe_to_list(predicted_vals),
+        #     },
+        #     "model": {
+        #         "model_name": self.model_name,
+        #     },
+        #     "metrics": analysis_result,
+        # }
 
 class BaselineExperimentRunner:
     def __init__(self, cfg: ExperimentConfig):
@@ -116,14 +133,15 @@ class BaselineExperimentRunner:
 
         for series in series_list:
             outcome = processor(series)
-
+            predictions = [p["predicted"] for p in outcome["predictions"]]
+            successes = [p["inverse_success"] for p in outcome["predictions"]]
             plot_path = plot_series(
                 series,
                 [],
-                outcome["data"]["predicted"],
-                outcome["inverse_success"],
+                predictions,
+                successes,
                 str(self.out_dir),
-                prediction_offset=len(outcome["data"]["original_split"]),
+                prediction_offset=len(outcome["data"]["train"]),
             )
             outcome["plot_path"] = plot_path
             self.recorder.record_jsonl(outcome)
