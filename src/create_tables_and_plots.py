@@ -249,7 +249,7 @@ def plot_single_series(folder_path, output_folder):
         raise FileNotFoundError(f"No experiment_config.jsonl found in {folder_path}")
 
     model_name = extract_model_name(config_path)
-    colour_name = "tab:gray"
+    colour_name = "tab:olive"
     if model_name in COLOUR_ALIAS.keys():
         colour_name = COLOUR_ALIAS[model_name]
 
@@ -272,7 +272,13 @@ def plot_single_series(folder_path, output_folder):
         ds_id = entry["id"]
         data = entry["data"]
         original = np.array(data["original"])
-        train = np.array(data["train"])
+
+        # backward compatible with previous data files
+        if "train" in data.keys():
+            train = np.array(data["train"])
+        elif "original_split" in data.keys():
+            train = np.array(data["original_split"])
+    
         train_len = len(train)
         orig_len = len(original)
 
