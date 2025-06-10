@@ -10,7 +10,7 @@ class BaseTimeSeriesPreprocessor(ABC):
     def __init__(self):
         self.preprocessor = "BaseClass"
         self.encoder = None
-        self.time_seperator = ""
+        self.time_separator = ""
 
     @abstractmethod
     def encode(self, time_series):
@@ -76,15 +76,15 @@ ABBA_SYMBOL_LISTS= {
 }
 
 class LLMABBAPreprocessor(BaseTimeSeriesPreprocessor):
-    def __init__(self, seperator = ',', symbol_set = "AlphabetAa", **encoder_params):
+    def __init__(self, separator = ',', symbol_set = "AlphabetAa", **encoder_params):
         super().__init__()
         self.preprocessor_type = "LLM-ABBA"
-        self.seperator = seperator
+        self.seperator = separator
         self.encoder_params = encoder_params
 
         updated_set = ABBA_SYMBOL_LISTS[symbol_set]
-        if seperator in updated_set:
-            updated_set.remove(seperator)
+        if separator in updated_set:
+            updated_set.remove(separator)
         self.encoder_params["alphabet_set"] = updated_set
 
     def encode(self, time_series):
@@ -108,7 +108,7 @@ class LLMTimePreprocessor(BaseTimeSeriesPreprocessor):
     def __init__(self, base = 10, prec = 3, bit_sep = '', time_sep = ',', alpha = 0.99, beta = 0.3, basic = False, signed=True):
         super().__init__()
         self.preprocessor_type = "LLMTime"
-        self.time_seperator = time_sep
+        self.time_separator = time_sep
         self.settings = SerializerSettings()
         self.settings.base = base
         self.settings.prec = prec   

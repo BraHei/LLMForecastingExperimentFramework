@@ -40,7 +40,6 @@ class ExperimentConfig:
     data_analyzers: List[str] = field(default_factory=lambda: ["basic"])
     experiment_name: Optional[str] = ""
     output_dir: str = "results"
-    seed: Optional[int] = None
     build_experiment_name_flag: bool = True
 
     # catch-all for forward compatibility
