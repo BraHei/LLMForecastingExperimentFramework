@@ -1,0 +1,43 @@
+model_name: smollm2-1.7b
+
+model_parameters:
+  temperature: 0.25
+  do_sample: true
+  num_return_sequences: 5
+
+dataset_name: "darts"
+dataset_params:
+  dataset_names: ["AirPassengers", "MonthlyMilk", "IceCreamHeater", "Wooly", "AusBeer"]
+
+preprocessor_name: "LLMTime"
+preprocessor_params_grid:
+  alpha: [0.99]
+  beta: [0.0]
+  base: [10]
+  prec: [2]
+  time_sep:
+    - '.'
+    - '_'
+    - '-'
+    - '|'
+    - '/'
+    - ':'
+    - '#'
+    - '$'
+    - '%'
+    - '^'
+    - '&'
+    - '>'
+    - '->'
+    - ')('
+    - ']['
+    - '}{'
+    - ' '
+    - '\n'
+    - '\t'
+
+
+input_data_factor: 0.8
+output_dir: 'results/LLMTIME_smoll_seperator_smoll17'
+output_jsonl: "model_responses.jsonl"
+data_analyzers: [MAE, MSE, MASE]
