@@ -37,23 +37,6 @@ class BaseDataset(ABC):
         """Return metadata about the dataset."""
         pass
 
-class NixtlaDataset(BaseDataset):
-    def __init__(self, dataset_name: str):
-        self.dataset_name = dataset_name
-        self.path = Path(f"./datasets/{dataset_name}.arrow")
-
-    def load(self):
-        if not self.path.exists():
-            raise FileNotFoundError(f"Dataset file not found: {self.path}")
-        return pa.ipc.open_file(self.path).read_all()
-
-    def metadata(self):
-        return {
-            "name": self.dataset_name,
-            "type": "forecasting",
-            "source": "nixtla",
-        }
-
 DARTS_DATASET_CLASSES = {
     "AirPassengers": AirPassengersDataset,
     "AusBeer": AusBeerDataset,
@@ -242,7 +225,6 @@ class KernelSynthDataset(BaseDataset):
         }
 
 DATASET_REGISTRY = {
-    "nixtla": NixtlaDataset,
     "kernelsynth": KernelSynthDataset,
     "darts": DartsDataset,
 }
