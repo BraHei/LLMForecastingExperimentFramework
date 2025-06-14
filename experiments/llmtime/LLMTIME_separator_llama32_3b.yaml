@@ -37,6 +37,6 @@ preprocessor_params_grid:
     - '\t'
 
 input_data_factor: 0.8
-output_dir: 'results/LLMTIME_seperator_llama32_3b
+output_dir: 'results/LLMTIME_seperator_llama32_3b'
 output_jsonl: "model_responses.jsonl"
 data_analyzers: [MAE, MSE, MASE]

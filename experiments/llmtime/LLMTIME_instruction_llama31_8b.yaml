@@ -1,4 +1,4 @@
-model_name: llama3.2-8b
+model_name: llama3.1-8b
 
 model_parameters:
   temperature: 0.25
@@ -44,6 +44,6 @@ instruction_object_grid:
   - { name: "USEGEN", text: "Use the time series for {ts_name} to generate future values:\n{input_data}" }
 
 input_data_factor: 0.8
-output_dir: 'results/LLMTIME_instruction_llama32_8b'
+output_dir: 'results/LLMTIME_instruction_llama31_8b'
 output_jsonl: "model_responses.jsonl"
 data_analyzers: [MAE, MSE, MASE]
