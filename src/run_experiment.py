@@ -49,7 +49,7 @@ class SeriesProcessor:
         
         ts_name = series["metadata"]["dataset_name"]
         ts_data = series["series"]
-        ts_seasonality = series["metadata"].get("seasonality", None)
+        ts_seasonality = series["metadata"].get("seasonality", 1)
 
         # --- split data ---------------------------------------------
         if self.cfg.input_data_length is not None:
@@ -96,11 +96,7 @@ class SeriesProcessor:
                 ts_test = ts_test[:min_len]
                 predicted_trimmed = predicted[:min_len]
                 for a in self.analyzers:
-                    if ts_seasonality:
-                        analysis = a.Analyze(ts_test, predicted_trimmed, ts_train, ts_seasonality)
-                        analysis_result[a.AnalyzerType] = analysis
-                    else:
-                        analysis_result[a.AnalyzerType] = a.Analyze(ts_test, predicted_trimmed)
+                    analysis_result[a.AnalyzerType]  = a.Analyze(ts_test, predicted_trimmed, ts_train, ts_seasonality)
             else:
                 ts_test = []
                 analysis_result["Malformed output"] = 0.0
