@@ -3,7 +3,7 @@ model_name: llama3.2-3b
 model_parameters:
   temperature: 0.25
   do_sample: true
-  num_return_sequences: 5
+  num_return_sequences: 10
 
 dataset_name: "darts"
 dataset_params:
@@ -13,7 +13,6 @@ preprocessor_name: "LLMTime"
 preprocessor_params_grid:
   alpha: [0.99]
   beta: [0.0]
-  base: [10]
   prec: [2]
 
 instruction_object_grid:
@@ -21,22 +20,14 @@ instruction_object_grid:
   - { name: "PTSV", text: "Predict the next values in this time series:\n{input_data}" }
   - { name: "CNT", text: "Continue the sequence based on previous trends:\n{input_data}" }
   - { name: "INF", text: "Based on past data, infer the upcoming entries in the sequence:\n{input_data}" }
-
   - { name: "PHYSP", text: "This data represents a physical process over time. Predict the next steps:\n{input_data}" }
   - { name: "SNSR", text: "These are sensor readings from an ongoing process. Forecast the next period:\n{input_data}" }
-
   - { name: "PERD", text: "Measurements have been recorded periodically. What comes next?\n{input_data}" }
   - { name: "IFTRND", text: "If this trend continues, what values appear next?\n{input_data}" }
   - { name: "LOGX", text: "What is the logical extension of this sequence?\n{input_data}" }
   - { name: "EVLV", text: "How does this sequence evolve over time?\n{input_data}" }
-
   - { name: "TASK", text: "Your task is to continue this time series with realistic values:\n{input_data}" }
   - { name: "ANLZ", text: "You are analyzing a time-dependent process. Predict what happens next:\n{input_data}" }
-
-  - { name: "OBSARW", text: "Observed series: {input_data} → Forecast:" }
-  - { name: "ITSP", text: "Input time series:\n{input_data}\n\nPredict what comes next:" }
-  - { name: "STRC", text: "Start of sequence:\n{input_data}\n\nComplete the time series:" }
-
   - { name: "NMDEXT", text: "Here is the observed trend for {ts_name}. Extend it meaningfully:\n{input_data}" }
   - { name: "CTXLEN", text: "Predict the next steps for {ts_name} using the first {input_length} of {total_length} values:\n{input_data}" }
   - { name: "GIVEN", text: "Given this sequence from {ts_name}, forecast its continuation:\n{input_data}" }
