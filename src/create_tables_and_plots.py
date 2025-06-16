@@ -12,16 +12,6 @@ from src.experiment_utils import fix_output_ownership
 
 fmt = lambda x: f"{x:.2f}" if pd.notna(x) and isinstance(x, float) else x
 
-COLOUR_ALIAS = {"NaiveSeasonal": "tab:olive",
-                "llama3.1-8b" : "tab:orange",
-                "llama3.2-3b" : "tab:red",
-                "llama3.2-1b" : "tab:brown",
-                "smollm2-1.7b" : "tab:blue",
-                "smollm2-360m" : "tab:purple",
-                "smollm2-135m" : "tab:cyan",
-                "distilgpt2-88m" : "tab:pink",
-}
-
 def extract_model_name(config_path):
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
@@ -79,6 +69,7 @@ def group_median_na_if_any_na_with_spread(df, group_cols, value_col="mean_value"
             return pd.NA
         return series.median()
     def spread(series):
+        series = series.dropna()
         return (series - series.mean()).abs().mean()
     grouped = df.groupby(group_cols, dropna=False)[value_col]
     summary = grouped.agg(
@@ -249,9 +240,9 @@ def plot_single_series(folder_path, output_folder):
         raise FileNotFoundError(f"No experiment_config.jsonl found in {folder_path}")
 
     model_name = extract_model_name(config_path)
-    colour_name = "tab:olive"
-    if model_name in COLOUR_ALIAS.keys():
-        colour_name = COLOUR_ALIAS[model_name]
+    colour_ground = "#1a1a40"
+    colour_forecast = "#0055cc"
+    colour_spread = "#4da6ff"
 
     if not responses_path.exists():
         raise FileNotFoundError(f"No model_responses.jsonl found in {folder_path}")
@@ -312,13 +303,36 @@ def plot_single_series(folder_path, output_folder):
         mean_pred = mean_pred[:max_pred_points]
         pred_x = np.arange(train_len, train_len + len(mean_pred))
 
-        ax.plot(np.arange(orig_len), original, label="Original", color="black", linewidth=1, zorder=2)
-        ax.plot(pred_x, mean_pred, label=label_name, color=colour_name, linewidth=1.1, zorder=3)
+        # Single plot
+        fig_single, ax_single = plt.subplots(figsize=(6, 4), dpi=300)
+        ax_single.plot(np.arange(orig_len), original, label="Original", color=colour_ground, linewidth=0.9, zorder=2)
+        ax_single.plot(pred_x, mean_pred, label=label_name, color=colour_forecast, linewidth=0.80, zorder=3)
 
         if show_spread:
             min_pred = min_pred[:max_pred_points]
             max_pred = max_pred[:max_pred_points]
-            ax.fill_between(pred_x, min_pred, max_pred, color=colour_name, alpha=0.18, label="Prediction spread (min/max)", zorder=1)
+            ax_single.fill_between(pred_x, min_pred, max_pred, color=colour_spread, alpha=0.4,
+                                   label="Prediction spread (min/max)", zorder=1)
+
+        ax_single.set_title(f"{model_name}: {ds_id}", fontsize=13)
+        ax_single.set_xlabel("Time (-)", fontsize=11)
+        ax_single.set_ylabel("Amplitude (-)", fontsize=11)
+        ax_single.grid(alpha=0.18)
+        ax_single.tick_params(axis='both', labelsize=9)
+        ax_single.legend(fontsize=10, loc='upper left')
+
+        single_save_path = folder_path / f"{ds_id}.pdf"
+        fig_single.savefig(single_save_path, dpi=300, bbox_inches='tight', format='pdf')
+        plt.close(fig_single)
+
+        # Aggregated plot
+        ax.plot(np.arange(orig_len), original, label="Original", color=colour_ground, linewidth=0.9, zorder=2)
+        ax.plot(pred_x, mean_pred, label=label_name, color=colour_forecast, linewidth=0.80, zorder=3)
+
+        if show_spread:
+            min_pred = min_pred[:max_pred_points]
+            max_pred = max_pred[:max_pred_points]
+            ax.fill_between(pred_x, min_pred, max_pred, color=colour_spread, alpha=0.4, label="Prediction spread (min/max)", zorder=1)
 
         ax.set_title(ds_id, fontsize=13)
         ax.set_xlabel("Time (-)", fontsize=11)
