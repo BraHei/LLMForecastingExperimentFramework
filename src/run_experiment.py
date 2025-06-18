@@ -20,11 +20,11 @@ from src.lmwrapper import MODEL_REGISTRY
 from src.data_analyzers import DATA_ANALYZER_REGISTRY
 
 
-# ---------------------------------------------------------------------
 class SeriesProcessor:
     """Turns one time-series into (recon, pred, metrics)."""
 
     def __init__(self, cfg: ExperimentConfig, preloaded_model = None):
+        # Initialize preprocessor and model using registries and config
         self.cfg = cfg
         self.preprocessor = build(
             cfg.preprocessor_name,
@@ -32,6 +32,7 @@ class SeriesProcessor:
             **cfg.preprocessor_params
         )
 
+        # Use preloaded model if available, else create new from config
         if (preloaded_model is None):
             self.model = build(
                 cfg.model_name,
@@ -41,29 +42,33 @@ class SeriesProcessor:
         else:
             preloaded_model.update_parameters(**cfg.model_parameters)
             self.model = preloaded_model
-        
+
+        # Initialize data analyzers
         self.analyzers = [build(name, DATA_ANALYZER_REGISTRY) for name in cfg.data_analyzers]
 
     # --------------------------------------------------------------
     def __call__(self, series : BaseDataset) -> dict:
-        
+        """
+        Processes a single time series through the entire experiment pipeline:
+        encoding, LLM inference, decoding, analysis, and formatting results.
+        """
         ts_name = series["metadata"]["dataset_name"]
         ts_data = series["series"]
         ts_seasonality = series["metadata"].get("seasonality", 1)
 
-        # --- split data ---------------------------------------------
+        # --- Data splitting ---------------------------------------------
         if self.cfg.input_data_length is not None:
             ts_train = ts_data[: self.cfg.input_data_length]
         else:
             ts_train = split_data(ts_data, self.cfg.input_data_factor)
 
-        # --- encode --------------------------------------------------
+        # --- Preprocessing: encode training data ------------------------
         data_string = self.preprocessor.encode(ts_train)
 
-        # --- reconstruct ---------------------------------------------
+        # --- Optional reconstruction for inspection ---------------------
         reconstructed, _ = inverse_transform_safe(self.preprocessor, data_string)
 
-        # --- prepend instruction ------------------------------------
+        # --- Optional instruction prepending ----------------------------
         if self.cfg.instruction_object:
             instr_text = self.cfg.instruction_object.get("text", "")
             try:
@@ -78,17 +83,17 @@ class SeriesProcessor:
                 formatted = instr_text + data_string
             data_string = formatted
 
-        # --- LLM interaction -----------------------------------------
+        # --- Model inference --------------------------------------------
         start = time.perf_counter()
         generated_list = self.model.generate_response(data_string)
         latency = time.perf_counter() - start
 
-        # --- decode predictions --------------------------------------
+        # --- Decoding and Evaluation ------------------------------------
         prediction_results = []
         for generated in generated_list:
             predicted, pred_success = inverse_transform_safe(self.preprocessor, generated)
 
-            # --- metrics ----------------------------------------------
+            # --- Analyze if decoding succeeded ---------------------------
             analysis_result: dict = {}
             if pred_success:
                 ts_test = ts_data[len(ts_train) : len(ts_train) + len(predicted)]
@@ -101,6 +106,7 @@ class SeriesProcessor:
                 ts_test = []
                 analysis_result["Malformed output"] = 0.0
 
+            # --- Append prediction results -------------------------------
             prediction_results.append({
                 "generated_string": generated,
                 "inverse_success": pred_success,
@@ -108,7 +114,7 @@ class SeriesProcessor:
                 "metrics": analysis_result,
             })
 
-        # --- assemble return dict -------------------------------------
+        # --- Return structured result ------------------------------------
         return {
             "id": ts_name,
             "latency": {
@@ -126,9 +132,12 @@ class SeriesProcessor:
                 "original_string": data_string,
             }
         }
-
-# ---------------------------------------------------------------------
+    
 class ExperimentRunner:
+    """
+    Manages running an experiment over a dataset and recording results.
+    """
+
     def __init__(self, cfg: ExperimentConfig, preloaded_model = None):
         self.cfg = cfg
         self.name = cfg.experiment_name
@@ -137,9 +146,8 @@ class ExperimentRunner:
         self.jsonl_filename = cfg.extra.get("output_jsonl", "results.jsonl")
         self.recorder = ResultRecorder(self.out_dir, self.jsonl_filename)
 
-    # --------------------------------------------------------------
     def run(self) -> List:
-        # --- dataset ------------------------------------------------
+        # --- Load dataset ---------------------------------------------
         dataset = build(
             self.cfg.dataset_name,
             DATASET_REGISTRY,
@@ -147,11 +155,12 @@ class ExperimentRunner:
         )
         series_iter = list(dataset.load())
         results = []
-        for series in series_iter:
 
+        # --- Process each series ---------------------------------------
+        for series in series_iter:
             outcome = self.processor(series)
 
-            # plot ----------------------------------------------------
+            # --- Visualization -----------------------------------------
             predictions = [p["predicted"] for p in outcome["predictions"]]
             successes = [p["inverse_success"] for p in outcome["predictions"]]
             ts_plot_path = plot_series(
@@ -163,25 +172,28 @@ class ExperimentRunner:
                 prediction_offset=len(outcome["data"]["train"]),
             )
 
+            # --- Store result ------------------------------------------
             outcome["plot_path"] = ts_plot_path
             self.recorder.record_jsonl(outcome)
             results.append(outcome)
 
+        # --- Finalize --------------------------------------------------
         fix_output_ownership(self.out_dir)
         print(f"Experiment '{self.name}' finished. Results in {self.out_dir}")
         return results
 
 
-# ---------------------------------------------------------------------
 if __name__ == "__main__":
     import argparse
 
+    # --- CLI interface to run experiment ------------------------------
     parser = argparse.ArgumentParser(description="Run a time-series LLM experiment")
     parser.add_argument(
         "--config", required=True, help="Path to YAML config file"
     )
     args = parser.parse_args()
 
+    # --- Load and persist config, then run ----------------------------
     cfg = load_config(args.config)
     cfg.save()
 
