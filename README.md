@@ -187,7 +187,7 @@ recovered = preprocessor.decode(encoded)
 | Key        | Class                 | Notes                                                        |
 | ---------- | --------------------- | ------------------------------------------------------------ |
 | `LLM-ABBA` | `LLMABBAPreprocessor` | Symbolic ABBA encoding, tunable alphabet & separator         |
-| `LLMTime`  | `LLMTimePreprocessor` | Numeric base‑*b* run‑length encoding from the LLMTimes paper |
+| `LLMTime`  | `LLMTimePreprocessor` | Numeric encoding from the LLMTimes paper |
 
 ---
 
