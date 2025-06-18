@@ -79,6 +79,10 @@ This project incorporates methods and code for data serialization and time serie
 
 This project uses publicly available datasets for training and evaluation:
 
+#### Darts Dataset
+- **Source:** [https://unit8co.github.io/darts/](https://unit8co.github.io/darts/)  
+  Hosts various real-life time series datasets for benchmarking.
+
 #### Kernel-Synth from Chronos Forecasting
 - Code adapted from [amazon-science/chronos-forecasting](https://github.com/amazon-science/chronos-forecasting)
 - Licensed under the Apache License 2.0
@@ -92,6 +96,7 @@ This project uses publicly available datasets for training and evaluation:
 #### UCR Anomaly Dataset
 - **Source:** [https://www.cs.ucr.edu/~eamonn/discords/](https://www.cs.ucr.edu/~eamonn/discords/)  
   Employed for anomaly detection benchmarking in univariate time series.
+
   
   
 # Project Overview
