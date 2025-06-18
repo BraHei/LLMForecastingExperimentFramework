@@ -4,39 +4,31 @@ from pathlib import Path
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 from darts.datasets import (
-    AirPassengersDataset,
-    AusBeerDataset,
-    EnergyDataset,
-    HeartRateDataset,
-    IceCreamHeaterDataset,
-    MonthlyMilkDataset,
-    SunspotsDataset,
-    TemperatureDataset,
-    AustralianTourismDataset,
-    WeatherDataset,
-    WoolyDataset,
-    GasRateCO2Dataset,
-    ETTh1Dataset,
-    ETTh2Dataset,
-    ETTm1Dataset,
-    ETTm2Dataset,
+    AirPassengersDataset, AusBeerDataset, EnergyDataset, HeartRateDataset, IceCreamHeaterDataset,
+    MonthlyMilkDataset, SunspotsDataset, TemperatureDataset, AustralianTourismDataset,
+    WeatherDataset, WoolyDataset, GasRateCO2Dataset, ETTh1Dataset, ETTh2Dataset,
+    ETTm1Dataset, ETTm2Dataset
 )
 import pyarrow as pa
-from typing import List
 
 from src.datasets_assets.kernelsynth import generate_time_series
+
+# --- Abstract base class for datasets ---
 
 class BaseDataset(ABC):
     @abstractmethod
     def load(self) -> Any:
-        """Load the dataset (e.g., DataFrame, Arrow table, list of dicts)."""
+        """Load the dataset (returns list of dicts or similar)."""
         pass
 
     @abstractmethod
     def metadata(self) -> Dict[str, Any]:
-        """Return metadata about the dataset."""
+        """Return metadata about the dataset (name, type, etc.)."""
         pass
 
+# --- Darts Dataset Configuration ---
+
+# Mapping of dataset names to their respective Darts classes
 DARTS_DATASET_CLASSES = {
     "AirPassengers": AirPassengersDataset,
     "AusBeer": AusBeerDataset,
@@ -56,6 +48,7 @@ DARTS_DATASET_CLASSES = {
     "ETTm2": ETTm2Dataset,
 }
 
+# Default seasonalities for known Darts datasets
 DARTS_DATASET_SEASONALITY = {
     "AirPassengers": 12,
     "AusBeer": 4,
@@ -75,13 +68,16 @@ DARTS_DATASET_SEASONALITY = {
     "ETTm2": 96,
 }
 
+# --- Darts Dataset Wrapper ---
+
 class DartsDataset(BaseDataset):
     def __init__(self, dataset_names: List[str]):
+        # Accept string or list of dataset names
         if isinstance(dataset_names, str):
             dataset_names = [dataset_names]
         self.dataset_names = dataset_names
 
-        # Validate dataset names
+        # Validate names
         invalid = [ds for ds in dataset_names if ds not in DARTS_DATASET_CLASSES]
         if invalid:
             raise ValueError(
@@ -90,19 +86,21 @@ class DartsDataset(BaseDataset):
             )
 
     def load(self):
-
+        """
+        Load and return a list of standardized time series dictionaries.
+        Handles both univariate and multivariate datasets.
+        """
         series_dicts = []
 
         for name in self.dataset_names:
             dataset_cls = DARTS_DATASET_CLASSES[name]
             dataset = dataset_cls()
             data = dataset.load()
-            
-            # Split multivariant if available
+
+            # Handle multivariate series by splitting into components
             if data.n_components and data.n_components > 1:
                 for i, component in enumerate(data.components):
                     univariate_ts = data[component]
-
                     series_dicts.append({
                         "series": univariate_ts.values().squeeze().tolist(),
                         "known_covariates": None,
@@ -117,6 +115,7 @@ class DartsDataset(BaseDataset):
                         }
                     })
             else:
+                # Handle univariate dataset
                 series_dicts.append({
                     "series": data.values().squeeze().tolist(),
                     "known_covariates": None,
@@ -133,11 +132,14 @@ class DartsDataset(BaseDataset):
         return series_dicts
 
     def metadata(self):
+        """Return general metadata for the dataset collection."""
         return {
             "name": ",".join(self.dataset_names),
             "type": "forecasting",
             "source": "darts",
         }
+
+# --- KernelSynth Synthetic Dataset ---
 
 class KernelSynthDataset(BaseDataset):
     def __init__(
@@ -154,17 +156,16 @@ class KernelSynthDataset(BaseDataset):
         self.n_jobs = n_jobs
         self.save = save
 
-        # Determine base directory and file path
+        # Setup file path for optional caching
         base_dir = Path(__file__).parent / "synthetic"
         base_dir.mkdir(parents=True, exist_ok=True)
-
-        self.file_path = (
-            base_dir /
-            f"kernel_synth_{num_series}_{max_kernels}_{sequence_lenght}.arrow"
-        )
+        self.file_path = base_dir / f"kernel_synth_{num_series}_{max_kernels}_{sequence_lenght}.arrow"
 
     def load(self):
-        # Try loading if file exists
+        """
+        Load synthetic dataset from disk if available, else generate and optionally save.
+        Uses joblib for parallel generation of multiple series.
+        """
         if self.file_path.exists():
             print(f"Loading pre-generated dataset from {self.file_path}")
             raw_data = pa.ipc.open_file(self.file_path).read_all().to_pylist()
@@ -178,6 +179,7 @@ class KernelSynthDataset(BaseDataset):
                 for _ in tqdm(range(self.num_series), desc="KernelSynth", leave=False)
             )
 
+            # Save to disk in Arrow format
             if self.save:
                 print(f"Saving dataset to {self.file_path}")
                 table = pa.Table.from_pylist(raw_data)
@@ -185,7 +187,7 @@ class KernelSynthDataset(BaseDataset):
                     with pa.ipc.new_file(f, table.schema) as writer:
                         writer.write_table(table)
 
-        # Standardize format
+        # Standardized format for returned series
         return [
             {
                 "series": item["target"],
@@ -209,8 +211,8 @@ class KernelSynthDataset(BaseDataset):
             for idx, item in enumerate(raw_data)
         ]
 
-
     def metadata(self):
+        """Return metadata including generation parameters for the synthetic dataset."""
         return {
             "name": "kernel-synth",
             "type": "synthetic",
@@ -224,6 +226,7 @@ class KernelSynthDataset(BaseDataset):
             },
         }
 
+# --- Dataset registry for dispatch ---
 DATASET_REGISTRY = {
     "kernelsynth": KernelSynthDataset,
     "darts": DartsDataset,
