@@ -1,10 +1,9 @@
 import os
 import json
 import matplotlib
-matplotlib.use("Agg")
+matplotlib.use("Agg")  # Headless mode for environments without GUI
 import matplotlib.pyplot as plt
 from pathlib import Path
-
 import pandas as pd
 
 from typing import TypeVar, Type
@@ -13,30 +12,41 @@ from src.config import ExperimentConfig
 
 T = TypeVar('T')
 
+# --- Utility Functions ---
+
 def build(name: str, registry: dict[str, type[T]], **kwargs) -> T:
+    """
+    Instantiate an object from a registry by name.
+    Raises ValueError if name not found.
+    """
     try:
         return registry[name](**kwargs)
     except KeyError:
         raise ValueError(f"Unknown {name=}. Available: {list(registry)}")
 
 def safe_to_list(x):
+    """Convert to list if 'tolist' method is available."""
     return x.tolist() if hasattr(x, "tolist") else x
 
 def split_data(input_list, percent):
     """
     Returns the first `percent` of the input list.
+    
     Args:
         input_list (list): The list to slice.
-        percent (float): The fraction of the list to return (between 0 and 1).
+        percent (float): The fraction of the list to return (0 to 1).
+    
     Returns:
-        list: A sliced portion of the input list.
+        list: The sliced portion.
     """
-
     cutoff = int(len(input_list) * percent)
- 
     return input_list[:cutoff]
 
 def save_experiment_settings(output_folder, model, preprocessor, dataset, analyzers):
+    """
+    Save key components of the experiment setup as a JSON file in the output folder.
+    Useful for auditing and reproducibility.
+    """
     settings = {
         "model": {
             "checkpoint": model.checkpoint,
@@ -54,6 +64,7 @@ def save_experiment_settings(output_folder, model, preprocessor, dataset, analyz
         "analyzers": [analyzer.AnalyzerType for analyzer in analyzers]
     }
 
+    # Optionally include encoder and settings if present
     if hasattr(preprocessor, "encoder_params"):
         settings["preprocessor"]["params"] = preprocessor.encoder_params
     if hasattr(preprocessor, "settings"):
@@ -65,38 +76,37 @@ def save_experiment_settings(output_folder, model, preprocessor, dataset, analyz
     with open(settings_path, "w") as f:
         json.dump(settings, f, indent=4)
 
-
 def inverse_transform_safe(encoder, encoded_str):
+    """
+    Try to decode a string using the encoder. Return success flag and value.
+    """
     try:
         return encoder.decode(encoded_str), True
     except Exception as e:
         print(e)
         return None, False
 
+# --- Plotting ---
 
 def plot_series(series, reconstruction, predictions, successes, output_folder, prediction_offset=None):
     """
-    Plot the original series, reconstruction, and multiple predictions on a single plot.
+    Plot the original, reconstruction, and predictions of a single series.
+    
     Args:
-        series: dict with keys "metadata" and "series"
-        reconstruction: list or array
-        predictions: list of predicted arrays/lists
-        successes: list of bools (same length as predictions)
-        output_folder: directory to save plot
-        prediction_offset: where to start plotting predictions
-        plot_suffix: optional unique suffix for filename
+        series: dict with keys 'series' and 'metadata'
+        reconstruction: list or array of reconstructed values
+        predictions: list of prediction arrays
+        successes: list of booleans indicating if prediction was successful
+        output_folder: directory to save the output PNG
+        prediction_offset: optional x-axis starting point for predictions
     """
-    import matplotlib.pyplot as plt
-
-    plt.style.use('default')
-
     idx = series["metadata"]["dataset_name"]
     original = series["series"]
 
     if prediction_offset is None:
         prediction_offset = len(original)
 
-    # Determine x-axis length: longest prediction that succeeded, or fallback to reconstruction
+    # Determine max x-axis length
     valid_pred_lengths = [
         len(pred) for pred, succ in zip(predictions, successes) if succ and pred is not None
     ]
@@ -123,7 +133,7 @@ def plot_series(series, reconstruction, predictions, successes, output_folder, p
                 alpha=0.8
             )
         else:
-            # Optionally, mark failed predictions
+            # Optional visual cue for failed prediction
             plt.axvline(prediction_offset, color='red', linestyle=':', alpha=0.5, label=f"Prediction {i+1} Failed")
 
     plt.xlabel("Sample (-)")
@@ -132,15 +142,19 @@ def plot_series(series, reconstruction, predictions, successes, output_folder, p
     plt.legend()
     plt.grid(True)
 
-    # Save and close
     path = f"{output_folder}/plot_{idx}.png"
-
     plt.xlim(0, max_len)
     plt.savefig(path)
     plt.close()
     return path
 
+# --- File permission management ---
+
 def fix_output_ownership(folder: Path):
+    """
+    Change file ownership in the folder to match HOST_UID/HOST_GID.
+    Useful in containerized environments (e.g., Docker).
+    """
     try:
         uid = int(os.environ.get("HOST_UID", -1))
         gid = int(os.environ.get("HOST_GID", -1))
@@ -160,35 +174,45 @@ def fix_output_ownership(folder: Path):
     except Exception as e:
         print(f"[Warning] Ownership fix failed: {e}")
 
-# ---------------------------------------------------------------------
+# --- Result Recording Class ---
+
 class ResultRecorder:
+    """
+    Responsible for recording predictions, metrics, and metadata to disk.
+    Supports tabular (TSV) and JSONL formats.
+    """
     def __init__(self, out_dir: Path, jsonl_file: str):
         self.out_dir = out_dir
         self.jsonl_path = self.out_dir / jsonl_file
         self.out_dir.mkdir(parents=True, exist_ok=True)
 
     def flatten_config(self, cfg: ExperimentConfig):
-        """Flatten relevant config fields for result table."""
-        flat = {}
-        # Add core fields (customize for your needs)
-        flat["experiment_name"] = cfg.experiment_name
-        flat["model_name"] = cfg.model_name
-        flat["preprocessor_name"] = cfg.preprocessor_name
-        flat["dataset_name"] = cfg.dataset_name
-        flat["instruction_name"] = cfg.instruction_object['name'] if cfg.instruction_object else None
-        flat["instruction_text"] = cfg.instruction_object['text'] if cfg.instruction_object else None
-        flat["input_data_length"] = cfg.input_data_length
-        flat["input_data_factor"] = cfg.input_data_factor
+        """
+        Flatten structured config into a flat dict for tabular output.
+        """
+        flat = {
+            "experiment_name": cfg.experiment_name,
+            "model_name": cfg.model_name,
+            "preprocessor_name": cfg.preprocessor_name,
+            "dataset_name": cfg.dataset_name,
+            "instruction_name": cfg.instruction_object['name'] if cfg.instruction_object else None,
+            "instruction_text": cfg.instruction_object['text'] if cfg.instruction_object else None,
+            "input_data_length": cfg.input_data_length,
+            "input_data_factor": cfg.input_data_factor,
+        }
         flat.update(cfg.preprocessor_params)
         flat.update(cfg.model_parameters)
-
         return flat
 
     def record_results_to_table(self, results: list, cfg: ExperimentConfig, output_file="master_results.tsv"):
+        """
+        Save metrics in TSV format (one row per metric per prediction).
+        Appends if file exists.
+        """
         rows = []
         meta = self.flatten_config(cfg)
+
         for entry in results:
-            # For each prediction in the result
             for pred_idx, prediction in enumerate(entry.get("predictions", [])):
                 for metric_name, metric_value in prediction["metrics"].items():
                     row = {
@@ -200,18 +224,20 @@ class ResultRecorder:
                     }
                     rows.append(row)
 
-        # Append to or create the TSV
         df = pd.DataFrame(rows)
-        output_file = self.out_dir / output_file
-        if Path(output_file).exists():
-            df.to_csv(output_file, sep="\t", mode="a", index=False, header=False)
+        output_path = self.out_dir / output_file
+
+        if output_path.exists():
+            df.to_csv(output_path, sep="\t", mode="a", index=False, header=False)
         else:
-            df.to_csv(output_file, sep="\t", mode="w", index=False, header=True)
-        
+            df.to_csv(output_path, sep="\t", mode="w", index=False, header=True)
+
         fix_output_ownership(self.out_dir)
 
-
     def record_jsonl(self, result: dict) -> None:
+        """
+        Append a structured result entry to a .jsonl file.
+        """
         with open(self.jsonl_path, "a") as f:
             f.write(json.dumps(result) + "\n")
         fix_output_ownership(self.out_dir)
