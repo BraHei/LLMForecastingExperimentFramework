@@ -264,8 +264,11 @@ def plot_single_series(folder_path, output_folder):
     model_name = extract_model_name(config_path)
 
     colour_ground = "#1a1a40"
-    colour_forecast = "#0055cc"
-    colour_spread = "#4da6ff"
+    # colour_forecast = "#0055cc"
+    # colour_spread = "#4da6ff"
+    colour_forecast = "#df8600"
+    colour_spread = "#ffb84d"
+
 
     if not responses_path.exists():
         raise FileNotFoundError(f"No model_responses.jsonl found in {folder_path}")
@@ -329,7 +332,7 @@ def plot_single_series(folder_path, output_folder):
         # Individual plot
         fig_single, ax_single = plt.subplots(figsize=(6, 4), dpi=300)
         ax_single.plot(np.arange(orig_len), original, label="Original", color=colour_ground, linewidth=0.9, zorder=2)
-        ax_single.plot(pred_x, mean_pred, label=label_name, color=colour_forecast, linewidth=0.80, zorder=3)
+        ax_single.plot(pred_x, mean_pred, label=label_name, color=colour_forecast, linewidth=1.2, zorder=3)
 
         if show_spread:
             min_pred = min_pred[:max_pred_points]
